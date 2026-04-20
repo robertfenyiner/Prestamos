@@ -283,10 +283,7 @@ router.get('/reports', (req: AuthRequest, res: Response) => {
 
 // POST /api/gastos — create expense
 router.post('/', (req: AuthRequest, res: Response) => {
-  const {
-    description, amount, currency_id = 1, category_id, company_id, date,
-    is_recurring, recurring_frequency, notes,
-  } = req.body
+  const { description, amount, currency_id = 1, category_id, company_id, date, is_recurring, recurring_frequency, notes, custom_exchange_rate } = req.body
   const userId = req.user!.id
 
   if (!description || !amount) {
@@ -301,17 +298,22 @@ router.post('/', (req: AuthRequest, res: Response) => {
     return
   }
 
-  // Auto-convert to COP
+  // Auto-convert to COP or use custom rate
   let amountCOP: number | null = null
   let exchangeRate: number | null = null
 
-  try {
-    const conversion = convertToCOP(amount, currency.code)
-    amountCOP = conversion.copAmount
-    exchangeRate = conversion.exchangeRate
-  } catch (err) {
-    console.error('Error converting to COP:', err)
-    // Continue without conversion — don't block creation
+  if (custom_exchange_rate && Number(custom_exchange_rate) > 0) {
+    exchangeRate = Number(custom_exchange_rate)
+    amountCOP = Math.round(amount * exchangeRate * 100) / 100
+  } else {
+    try {
+      const conversion = convertToCOP(amount, currency.code)
+      amountCOP = conversion.copAmount
+      exchangeRate = conversion.exchangeRate
+    } catch (err) {
+      console.error('Error converting to COP:', err)
+      // Continue without conversion — don't block creation
+    }
   }
 
   // Calculate next due date for recurring
@@ -355,7 +357,7 @@ router.post('/', (req: AuthRequest, res: Response) => {
 router.put('/:id', (req: AuthRequest, res: Response) => {
   const { id } = req.params
   const userId = req.user!.id
-  const { description, amount, currency_id, category_id, company_id, date, is_recurring, recurring_frequency, notes } = req.body
+  const { description, amount, currency_id, category_id, company_id, date, is_recurring, recurring_frequency, notes, custom_exchange_rate } = req.body
 
   const existing = db.prepare('SELECT id FROM expenses WHERE id = ? AND user_id = ?').get(id, userId)
   if (!existing) {
@@ -363,11 +365,14 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
     return
   }
 
-  // If amount or currency changed, re-convert
+  // If amount or currency changed, re-convert or use custom rate
   let amountCOP: number | null = null
   let exchangeRate: number | null = null
 
-  if (amount && currency_id) {
+  if (custom_exchange_rate && Number(custom_exchange_rate) > 0 && amount) {
+    exchangeRate = Number(custom_exchange_rate)
+    amountCOP = Math.round(amount * exchangeRate * 100) / 100
+  } else if (amount && currency_id) {
     const currency = db.prepare('SELECT code FROM currencies WHERE id = ?').get(currency_id) as any
     if (currency) {
       try {

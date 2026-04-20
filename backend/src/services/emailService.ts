@@ -41,16 +41,16 @@ export async function sendRecurringExpenseReminder(
 ) {
   const rows = expenses.map(e => `
     <tr>
-      <td style="padding:10px 14px;border-bottom:1px solid #2a2a3e;">
+      <td style="padding:10px 6px;border-bottom:1px solid #2a2a3e;word-break:break-word;">
         <strong>${e.description}</strong>
-        ${e.category_name ? `<br><span style="font-size:12px;color:#a78bfa;">${e.category_icon || '📋'} ${e.category_name}</span>` : ''}
+        ${e.category_name ? `<br><span style="font-size:11px;color:#a78bfa;">${e.category_icon || '📋'} ${e.category_name}</span>` : ''}
       </td>
-      <td style="padding:10px 14px;border-bottom:1px solid #2a2a3e;text-align:right;">
-        <strong>${e.currency_symbol}${e.amount.toLocaleString('es-CO')}</strong> <span style="font-size:11px;color:#888;">${e.currency_code}</span>
-        ${e.amount_cop && e.currency_code !== 'COP' ? `<br><span style="font-size:11px;color:#888;">≈ ${fmtCOP(e.amount_cop)} COP</span>` : ''}
+      <td style="padding:10px 6px;border-bottom:1px solid #2a2a3e;text-align:right;">
+        <strong>${e.currency_symbol}${e.amount.toLocaleString('es-CO')}</strong> <span style="font-size:10px;color:#888;">${e.currency_code}</span>
+        ${e.amount_cop && e.currency_code !== 'COP' ? `<br><span style="font-size:10px;color:#888;">≈ ${fmtCOP(e.amount_cop)} COP</span>` : ''}
       </td>
-      <td style="padding:10px 14px;border-bottom:1px solid #2a2a3e;text-align:center;font-size:12px;color:#a78bfa;">${FREQ[e.recurring_frequency] || e.recurring_frequency}</td>
-      <td style="padding:10px 14px;border-bottom:1px solid #2a2a3e;text-align:center;font-size:13px;">${fmtDate(e.next_due_date)}</td>
+      <td style="padding:10px 6px;border-bottom:1px solid #2a2a3e;text-align:center;font-size:11px;color:#a78bfa;">${FREQ[e.recurring_frequency] || e.recurring_frequency}</td>
+      <td style="padding:10px 6px;border-bottom:1px solid #2a2a3e;text-align:center;font-size:12px;">${fmtDate(e.next_due_date)}</td>
     </tr>
   `).join('')
 
@@ -62,18 +62,20 @@ export async function sendRecurringExpenseReminder(
       <h1 style="margin:0;font-size:22px;color:white;">💰 RobertApp — Recordatorio</h1>
       <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85);">Tienes ${expenses.length} gasto${expenses.length > 1 ? 's' : ''} recurrente${expenses.length > 1 ? 's' : ''} próximo${expenses.length > 1 ? 's' : ''} a vencer</p>
     </div>
-    <div style="padding:20px 24px;">
-      <table style="width:100%;border-collapse:collapse;font-size:14px;">
-        <thead>
-          <tr style="color:#888;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">
-            <th style="padding:8px 14px;text-align:left;border-bottom:2px solid #2a2a3e;">Descripción</th>
-            <th style="padding:8px 14px;text-align:right;border-bottom:2px solid #2a2a3e;">Monto</th>
-            <th style="padding:8px 14px;text-align:center;border-bottom:2px solid #2a2a3e;">Frecuencia</th>
-            <th style="padding:8px 14px;text-align:center;border-bottom:2px solid #2a2a3e;">Vence</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
+    <div style="padding:16px 12px;">
+      <div style="overflow-x:auto;width:100%;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:320px;">
+          <thead>
+            <tr style="color:#888;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;">
+              <th style="padding:8px 6px;text-align:left;border-bottom:2px solid #2a2a3e;">Descripción</th>
+              <th style="padding:8px 6px;text-align:right;border-bottom:2px solid #2a2a3e;">Monto</th>
+              <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #2a2a3e;">Frecuencia</th>
+              <th style="padding:8px 6px;text-align:center;border-bottom:2px solid #2a2a3e;">Vence</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
       <div style="margin-top:16px;padding:14px;background:#2a2a3e;border-radius:8px;text-align:center;">
         <span style="font-size:13px;color:#888;">Total aproximado:</span>
         <span style="font-size:18px;font-weight:700;color:#6366f1;margin-left:8px;">${fmtCOP(total)}</span>

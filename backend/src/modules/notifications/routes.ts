@@ -3,6 +3,7 @@ import db from '../../database'
 import { authRequired, type AuthRequest } from '../../middleware/auth'
 import { sendTestEmail, sendRecurringExpenseReminder } from '../../services/emailService'
 import { sendTestTelegramMessage, sendDailySavingsReport } from '../../services/telegramService'
+import { processDueRecurringExpenses } from '../../services/recurringService'
 
 const router = Router()
 router.use(authRequired)
@@ -102,7 +103,8 @@ router.post('/test-telegram', async (req: AuthRequest, res: Response) => {
 router.post('/check-due', async (req: AuthRequest, res: Response) => {
   try {
     const result = await checkAndNotifyDueExpenses()
-    res.json(result)
+    const result2 = await processDueRecurringExpenses()
+    res.json({ notifications: result, recurring: result2 })
   } catch (err: any) {
     console.error('Check-due error:', err)
     res.status(500).json({ error: err.message })
@@ -218,10 +220,12 @@ export function startNotificationScheduler() {
 
   setTimeout(() => {
     checkAndNotifyDueExpenses().catch(err => console.error('Scheduled expense check failed:', err))
+    processDueRecurringExpenses().catch(err => console.error('Scheduled recurring process failed:', err))
   }, 30_000)
 
   expenseScheduler = setInterval(() => {
     checkAndNotifyDueExpenses().catch(err => console.error('Scheduled expense check failed:', err))
+    processDueRecurringExpenses().catch(err => console.error('Scheduled recurring process failed:', err))
   }, EXPENSE_INTERVAL)
 
   // Daily savings report: every 24 hours (first run in 1 minute)

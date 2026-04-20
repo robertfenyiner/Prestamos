@@ -1,5 +1,6 @@
 import { Menu, Moon, Sun, Bell } from 'lucide-react'
 import { useTheme } from '@/hooks/useTheme'
+import { useNavigate } from 'react-router-dom'
 
 interface NavbarProps {
   onMenuToggle: () => void
@@ -7,6 +8,7 @@ interface NavbarProps {
 
 export default function Navbar({ onMenuToggle }: NavbarProps) {
   const { theme, toggleTheme } = useTheme()
+  const navigate = useNavigate()
 
   return (
     <div className="navbar">
@@ -33,6 +35,7 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
         {/* Notifications */}
         <button
+          onClick={() => navigate('/notificaciones')}
           className="btn-ghost"
           style={{
             padding: 8,
@@ -48,16 +51,6 @@ export default function Navbar({ onMenuToggle }: NavbarProps) {
           aria-label="Notificaciones"
         >
           <Bell size={20} />
-          <span style={{
-            position: 'absolute',
-            top: 6,
-            right: 6,
-            width: 7,
-            height: 7,
-            background: 'var(--color-danger)',
-            borderRadius: '50%',
-            border: '2px solid var(--color-bg-primary)',
-          }} />
         </button>
 
         {/* Theme toggle */}

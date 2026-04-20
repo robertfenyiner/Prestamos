@@ -14,6 +14,8 @@ export default function NotificacionesPage() {
   const [form, setForm] = useState({
     email_enabled: true,
     email_address: '',
+    telegram_enabled: false,
+    telegram_chat_id: '',
     notify_days_before: 1,
   })
 
@@ -24,6 +26,8 @@ export default function NotificacionesPage() {
         setForm({
           email_enabled: !!r.data.email_enabled,
           email_address: r.data.email_address || '',
+          telegram_enabled: !!r.data.telegram_enabled,
+          telegram_chat_id: r.data.telegram_chat_id || '',
           notify_days_before: r.data.notify_days_before || 1,
         })
       })
@@ -57,6 +61,18 @@ export default function NotificacionesPage() {
       showMessage('error', err.response?.data?.error || 'Error al enviar email de prueba')
     }
     setTesting(false)
+  }
+
+  const [testingTg, setTestingTg] = useState(false)
+  const handleTestTelegram = async () => {
+    setTestingTg(true)
+    try {
+      const r = await notificationsAPI.testTelegram()
+      showMessage('success', r.data.message)
+    } catch (err: any) {
+      showMessage('error', err.response?.data?.error || 'Error al enviar mensaje de Telegram (¿Falta el Token del Bot?)')
+    }
+    setTestingTg(false)
   }
 
   const handleCheckDue = async () => {
@@ -162,7 +178,62 @@ export default function NotificacionesPage() {
               {saving ? 'Guardando...' : 'Guardar Configuración'}
             </button>
           </div>
+        {/* Telegram Settings */}
+        <div className="card" style={{ padding: 24, marginTop: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+              <Send size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Notificaciones por Telegram</h3>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Recibe el resumen diario de ahorros</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Enable toggle */}
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Activar notificaciones por Telegram</span>
+              <div style={{ position: 'relative', width: 44, height: 24 }}>
+                <input type="checkbox" checked={form.telegram_enabled}
+                  onChange={e => setForm({ ...form, telegram_enabled: e.target.checked })}
+                  style={{ opacity: 0, width: '100%', height: '100%', position: 'absolute', cursor: 'pointer', zIndex: 1, margin: 0 }} />
+                <div style={{
+                  width: 44, height: 24, borderRadius: 12,
+                  background: form.telegram_enabled ? '#3b82f6' : 'var(--color-border)',
+                  transition: 'background 0.2s', position: 'relative',
+                }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: '50%', background: 'white',
+                    position: 'absolute', top: 3,
+                    left: form.telegram_enabled ? 23 : 3,
+                    transition: 'left 0.2s',
+                  }} />
+                </div>
+              </div>
+            </label>
+
+            {/* Chat ID */}
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Chat ID de Telegram</label>
+              <input className="input" type="text" value={form.telegram_chat_id}
+                onChange={e => setForm({ ...form, telegram_chat_id: e.target.value })}
+                placeholder="Ej: 7559796631"
+                disabled={!form.telegram_enabled} />
+              <p style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)', marginTop: 6, margin: 0 }}>
+                Obtenlo enviando un mensaje a <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" style={{ color: '#3b82f6', textDecoration: 'none' }}>@userinfobot</a>.
+              </p>
+            </div>
+
+            {/* Save button */}
+            <button className="btn btn-success" onClick={handleSave} disabled={saving}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', marginTop: 8 }}>
+              {saving ? <Loader2 size={16} className="loading-spin" /> : <Save size={16} />}
+              {saving ? 'Guardando...' : 'Guardar Telegram'}
+            </button>
+          </div>
         </div>
+      </div>
 
         {/* Actions */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -184,6 +255,24 @@ export default function NotificacionesPage() {
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 20px' }}>
               {testing ? <Loader2 size={16} className="loading-spin" /> : <Send size={16} />}
               {testing ? 'Enviando...' : 'Enviar Email de Prueba'}
+            </button>
+          </div>
+
+          {/* Test Telegram */}
+          <div className="card" style={{ padding: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-primary-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#3b82f6' }}>
+                <Send size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Test de Telegram</h3>
+                <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Verifica la conexión con el bot</p>
+              </div>
+            </div>
+            <button className="btn btn-primary" onClick={handleTestTelegram} disabled={testingTg || !form.telegram_chat_id}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px 20px', background: '#3b82f6', borderColor: '#3b82f6' }}>
+              {testingTg ? <Loader2 size={16} className="loading-spin" /> : <Send size={16} />}
+              {testingTg ? 'Enviando...' : 'Enviar Test a Telegram'}
             </button>
           </div>
 

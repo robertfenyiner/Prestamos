@@ -65,6 +65,7 @@ export interface ExpensePayload {
   is_recurring?: boolean
   recurring_frequency?: string
   notes?: string
+  custom_exchange_rate?: number
 }
 
 export const gastosAPI = {

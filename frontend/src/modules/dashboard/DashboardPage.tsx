@@ -15,6 +15,7 @@ interface DashboardData {
   recentExpenses: any[]
   savingsBoxes: any[]
   monthlyTrend: any[]
+  expensesByCompany: any[]
 }
 
 function formatCOP(value: number) {
@@ -64,13 +65,6 @@ export default function DashboardPage() {
       change: `${data.expenseCount} transacciones`,
       positive: false,
       icon: Receipt, color: 'var(--color-danger)', bg: 'var(--color-danger-soft)',
-    },
-    {
-      label: 'Meta de Ahorro',
-      value: `${data.savingsGoalProgress}%`,
-      change: 'del total',
-      positive: data.savingsGoalProgress >= 50,
-      icon: Target, color: 'var(--color-warning)', bg: 'var(--color-warning-soft)',
     },
   ]
 
@@ -135,8 +129,13 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-danger)' }}>-{formatCOP(tx.amount)}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-danger)' }}>
+                    -{tx.currency_symbol || '$'}{Math.abs(tx.amount).toLocaleString('es-CO', { minimumFractionDigits: tx.amount < 1000 ? 2 : 0 })} <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{tx.currency_code}</span>
+                  </div>
+                  {tx.currency_code !== 'COP' && tx.amount_cop && (
+                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>≈ {formatCOP(tx.amount_cop)} COP</div>
+                  )}
+                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
                     {new Date(tx.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
                   </div>
                 </div>
@@ -145,42 +144,41 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Savings Boxes */}
+        {/* Expenses by Company */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Cajitas de Ahorro</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 }}>Progreso hacia tus metas</p>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Gastos por Empresa</h3>
+              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 }}>Distribución en el mes actual</p>
             </div>
-            <PiggyBank size={18} style={{ color: 'var(--color-text-muted)' }} />
+            <Receipt size={18} style={{ color: 'var(--color-text-muted)' }} />
           </div>
           <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {data.savingsBoxes.length === 0 ? (
+            {data.expensesByCompany?.length === 0 ? (
               <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem', padding: 10 }}>
-                No hay cajitas de ahorro
+                No hay gastos este mes
               </div>
-            ) : data.savingsBoxes.map((box: any) => {
-              const progress = box.goal > 0 ? Math.round((box.balance / box.goal) * 100) : 0
+            ) : data.expensesByCompany?.map((comp: any) => {
+              const progress = data.expensesThisMonth > 0 ? Math.round((comp.total / data.expensesThisMonth) * 100) : 0
               return (
-                <div key={box.name}>
+                <div key={comp.name || 'Personal'}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{box.name}</span>
-                      <span className="badge badge-accent" style={{ marginLeft: 8 }}>{box.rate_ea}% EA</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{comp.name || 'Personal (Sin empresa)'}</span>
                     </div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>
-                      {formatCOP(box.balance)} / {formatCOP(box.goal)}
+                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
+                      {formatCOP(comp.total)}
                     </span>
                   </div>
                   <div style={{ width: '100%', height: 8, background: 'var(--color-bg-hover)', borderRadius: 9999, overflow: 'hidden' }}>
                     <div style={{
                       width: `${Math.min(progress, 100)}%`, height: '100%', borderRadius: 9999,
-                      background: progress >= 75 ? 'var(--color-success)' : progress >= 50 ? 'var(--color-accent)' : 'var(--color-warning)',
+                      background: comp.color || 'var(--color-accent)',
                       transition: 'width 0.6s ease',
                     }} />
                   </div>
                   <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
-                    {progress}% completado
+                    {progress}% del total
                   </div>
                 </div>
               )

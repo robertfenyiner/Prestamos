@@ -31,12 +31,12 @@ function autoIcon(name: string): string {
 /* ===== Types ===== */
 interface FormState {
   description: string; amount: number | ''; currency_id: number; category_id: number | ''; company_id: number | ''
-  date: string; is_recurring: boolean; recurring_frequency: string; notes: string
+  date: string; is_recurring: boolean; recurring_frequency: string; notes: string; custom_exchange_rate: number | ''
 }
 const emptyForm: FormState = {
   description: '', amount: '', currency_id: 1, category_id: '', company_id: '',
   date: new Date().toISOString().split('T')[0],
-  is_recurring: false, recurring_frequency: 'monthly', notes: '',
+  is_recurring: false, recurring_frequency: 'monthly', notes: '', custom_exchange_rate: ''
 }
 
 /* ===== Component ===== */
@@ -99,7 +99,7 @@ export default function GastosPage() {
   const openEdit = (e: any) => {
     setEditingId(e.id)
     setForm({ description: e.description, amount: e.amount, currency_id: e.currency_id, category_id: e.category_id || '', company_id: e.company_id || '',
-      date: e.date, is_recurring: !!e.is_recurring, recurring_frequency: e.recurring_frequency || 'monthly', notes: e.notes || '' })
+      date: e.date, is_recurring: !!e.is_recurring, recurring_frequency: e.recurring_frequency || 'monthly', notes: e.notes || '', custom_exchange_rate: e.exchange_rate || '' })
     setPendingFiles([]); setShowForm(true); scrollToForm()
   }
   const handleSubmit = async (ev: React.FormEvent) => {
@@ -111,6 +111,7 @@ export default function GastosPage() {
       date: form.date,
       is_recurring: form.is_recurring, recurring_frequency: form.is_recurring ? form.recurring_frequency : undefined,
       notes: form.notes || undefined,
+      custom_exchange_rate: form.custom_exchange_rate ? Number(form.custom_exchange_rate) : undefined,
     }
     try {
       let expId = editingId
@@ -269,6 +270,10 @@ export default function GastosPage() {
             <div className="form-row" style={{ marginTop: 12 }}>
               <div><label className="form-label">Fecha</label>
                 <input className="input" type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} /></div>
+              {currencies.find(c => c.id === form.currency_id)?.code !== 'COP' && (
+                <div><label className="form-label">Tasa Cambio (Opcional)</label>
+                  <input className="input" type="number" step="0.0001" min={0.0001} placeholder="Auto" value={form.custom_exchange_rate} onChange={e => setForm({ ...form, custom_exchange_rate: Number(e.target.value) || '' })} style={{ width: 120 }} /></div>
+              )}
               <label className="form-check">
                 <input type="checkbox" checked={form.is_recurring} onChange={e => setForm({ ...form, is_recurring: e.target.checked })} /> Recurrente</label>
               {form.is_recurring && (

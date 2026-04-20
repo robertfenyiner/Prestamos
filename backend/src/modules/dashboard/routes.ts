@@ -67,6 +67,16 @@ router.get('/summary', (req: AuthRequest, res: Response) => {
     ORDER BY month
   `).all(userId)
 
+  // Expenses by company this month
+  const expensesByCompany = db.prepare(`
+    SELECT comp.name, comp.color, SUM(COALESCE(e.amount_cop, e.amount)) as total
+    FROM expenses e
+    LEFT JOIN companies comp ON e.company_id = comp.id
+    WHERE e.user_id = ? AND e.date >= date('now', 'start of month')
+    GROUP BY COALESCE(comp.id, 0)
+    ORDER BY total DESC
+  `).all(userId)
+
   const expenseChange = expensesLastMonth.total > 0
     ? ((expensesThisMonth.total - expensesLastMonth.total) / expensesLastMonth.total * 100).toFixed(1)
     : '0'
@@ -83,6 +93,7 @@ router.get('/summary', (req: AuthRequest, res: Response) => {
     recentExpenses,
     savingsBoxes: boxes,
     monthlyTrend,
+    expensesByCompany,
   })
 })
 
