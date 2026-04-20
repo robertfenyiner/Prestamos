@@ -60,6 +60,7 @@ export interface ExpensePayload {
   amount: number
   currency_id?: number
   category_id?: number
+  company_id?: number
   date?: string
   is_recurring?: boolean
   recurring_frequency?: string
@@ -67,7 +68,7 @@ export interface ExpensePayload {
 }
 
 export const gastosAPI = {
-  list: (params?: { category?: string; from?: string; to?: string; search?: string; limit?: number }) =>
+  list: (params?: { category?: string; company?: number; from?: string; to?: string; search?: string; limit?: number }) =>
     api.get('/gastos', { params }),
   summary: (months?: number) =>
     api.get('/gastos/summary', { params: { months } }),
@@ -87,6 +88,14 @@ export const gastosAPI = {
     api.put(`/gastos/categories/${id}`, data),
   deleteCategory: (id: number) =>
     api.delete(`/gastos/categories/${id}`),
+  companies: () =>
+    api.get('/gastos/companies'),
+  createCompany: (data: { name: string; description?: string; color?: string }) =>
+    api.post('/gastos/companies', data),
+  updateCompany: (id: number, data: { name?: string; description?: string; color?: string }) =>
+    api.put(`/gastos/companies/${id}`, data),
+  deleteCompany: (id: number) =>
+    api.delete(`/gastos/companies/${id}`),
 }
 
 // ===== Files =====

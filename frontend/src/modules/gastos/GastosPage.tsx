@@ -30,11 +30,11 @@ function autoIcon(name: string): string {
 
 /* ===== Types ===== */
 interface FormState {
-  description: string; amount: number | ''; currency_id: number; category_id: number | ''
+  description: string; amount: number | ''; currency_id: number; category_id: number | ''; company_id: number | ''
   date: string; is_recurring: boolean; recurring_frequency: string; notes: string
 }
 const emptyForm: FormState = {
-  description: '', amount: '', currency_id: 1, category_id: '',
+  description: '', amount: '', currency_id: 1, category_id: '', company_id: '',
   date: new Date().toISOString().split('T')[0],
   is_recurring: false, recurring_frequency: 'monthly', notes: '',
 }
@@ -43,10 +43,12 @@ const emptyForm: FormState = {
 export default function GastosPage() {
   const [expenses, setExpenses] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
+  const [companies, setCompanies] = useState<any[]>([])
   const [currencies, setCurrencies] = useState<any[]>([])
   const [total, setTotal] = useState(0)
   const [totalCOP, setTotalCOP] = useState(0)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterCompany, setFilterCompany] = useState<number | ''>('')
   const [loading, setLoading] = useState(true)
 
   const [showForm, setShowForm] = useState(false)
@@ -64,6 +66,10 @@ export default function GastosPage() {
   const [editCatId, setEditCatId] = useState<number | null>(null)
   const [catForm, setCatForm] = useState({ name: '', color: '#6366f1' })
 
+  const [showComps, setShowComps] = useState(false)
+  const [editCompId, setEditCompId] = useState<number | null>(null)
+  const [compForm, setCompForm] = useState({ name: '', color: '#10b981' })
+
   const [filesExpenseId, setFilesExpenseId] = useState<number | null>(null)
   const [expenseFiles, setExpenseFiles] = useState<any[]>([])
   const [uploadingFiles, setUploadingFiles] = useState(false)
@@ -72,15 +78,17 @@ export default function GastosPage() {
   const fetchExpenses = useCallback(() => {
     const params: any = { limit: 50 }
     if (searchTerm) params.search = searchTerm
+    if (filterCompany) params.company = filterCompany
     gastosAPI.list(params).then(r => {
       setExpenses(r.data.expenses); setTotal(r.data.total); setTotalCOP(r.data.totalAmountCOP)
     }).catch(console.error).finally(() => setLoading(false))
-  }, [searchTerm])
+  }, [searchTerm, filterCompany])
 
   const fetchCats = () => gastosAPI.categories().then(r => setCategories(r.data))
+  const fetchComps = () => gastosAPI.companies().then(r => setCompanies(r.data))
 
   useEffect(() => {
-    Promise.all([fetchCats(), currenciesAPI.list().then(r => setCurrencies(r.data))]).catch(console.error)
+    Promise.all([fetchCats(), fetchComps(), currenciesAPI.list().then(r => setCurrencies(r.data))]).catch(console.error)
     fetchExpenses()
   }, [])
 
@@ -90,7 +98,7 @@ export default function GastosPage() {
   const openCreate = () => { setEditingId(null); setForm({ ...emptyForm }); setPendingFiles([]); setShowForm(true); scrollToForm() }
   const openEdit = (e: any) => {
     setEditingId(e.id)
-    setForm({ description: e.description, amount: e.amount, currency_id: e.currency_id, category_id: e.category_id || '',
+    setForm({ description: e.description, amount: e.amount, currency_id: e.currency_id, category_id: e.category_id || '', company_id: e.company_id || '',
       date: e.date, is_recurring: !!e.is_recurring, recurring_frequency: e.recurring_frequency || 'monthly', notes: e.notes || '' })
     setPendingFiles([]); setShowForm(true); scrollToForm()
   }
@@ -98,7 +106,9 @@ export default function GastosPage() {
     ev.preventDefault()
     const payload: ExpensePayload = {
       description: form.description, amount: Number(form.amount), currency_id: form.currency_id,
-      category_id: form.category_id ? Number(form.category_id) : undefined, date: form.date,
+      category_id: form.category_id ? Number(form.category_id) : undefined,
+      company_id: form.company_id ? Number(form.company_id) : undefined,
+      date: form.date,
       is_recurring: form.is_recurring, recurring_frequency: form.is_recurring ? form.recurring_frequency : undefined,
       notes: form.notes || undefined,
     }
@@ -142,6 +152,18 @@ export default function GastosPage() {
     await gastosAPI.deleteCategory(id); fetchCats()
   }
 
+  /* Companies */
+  const saveComp = async () => {
+    if (!compForm.name) return
+    if (editCompId) { await gastosAPI.updateCompany(editCompId, { name: compForm.name, color: compForm.color }) }
+    else { await gastosAPI.createCompany({ name: compForm.name, color: compForm.color }) }
+    setCompForm({ name: '', color: '#10b981' }); setEditCompId(null); fetchComps()
+  }
+  const deleteComp = async (id: number) => {
+    if (!confirm('¿Eliminar empresa? Los gastos asociados quedarán sin empresa.')) return
+    await gastosAPI.deleteCompany(id); fetchComps()
+  }
+
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
       <Loader2 size={28} className="loading-spin" style={{ color: 'var(--color-accent)' }} />
@@ -157,6 +179,9 @@ export default function GastosPage() {
           <p className="page-subtitle">Gestiona tus gastos en múltiples monedas</p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn btn-ghost" onClick={() => setShowComps(!showComps)}>
+            <Settings size={15} /> <span className="hide-mobile">Empresas</span> {showComps ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
           <button className="btn btn-ghost" onClick={() => setShowCats(!showCats)}>
             <Settings size={15} /> <span className="hide-mobile">Categorías</span> {showCats ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
@@ -192,6 +217,31 @@ export default function GastosPage() {
         </div>
       )}
 
+      {/* Companies Panel */}
+      {showComps && (
+        <div className="card animate-fade-in" style={{ padding: 16, marginBottom: 16 }}>
+          <h3 style={{ margin: '0 0 10px', fontSize: '0.88rem', fontWeight: 600 }}>Gestionar Empresas</h3>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'end' }}>
+            <input className="input" placeholder="Nombre de empresa" value={compForm.name}
+              onChange={e => setCompForm({ ...compForm, name: e.target.value })} style={{ width: 200 }} />
+            <input type="color" value={compForm.color} onChange={e => setCompForm({ ...compForm, color: e.target.value })}
+              style={{ width: 40, height: 36, border: 'none', cursor: 'pointer', borderRadius: 6 }} />
+            <button className="btn btn-success" onClick={saveComp} style={{ padding: '6px 14px' }}>{editCompId ? 'Actualizar' : 'Crear'}</button>
+            {editCompId && <button className="btn btn-ghost" onClick={() => { setEditCompId(null); setCompForm({ name: '', color: '#10b981' }) }}>Cancelar</button>}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {companies.map(c => (
+              <span key={c.id} className="badge" style={{ background: c.color + '18', color: c.color, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                onClick={() => { setEditCompId(c.id); setCompForm({ name: c.name, color: c.color }) }}>
+                {c.name}
+                <button onClick={ev => { ev.stopPropagation(); deleteComp(c.id) }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: 0, marginLeft: 2, opacity: 0.6, display: 'inline-flex' }}><X size={12} /></button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Create / Edit Form */}
       {showForm && (
         <div ref={formRef} className="card animate-fade-in" style={{ padding: 20, marginBottom: 16 }}>
@@ -211,6 +261,10 @@ export default function GastosPage() {
                 <select className="input" value={form.category_id} onChange={e => setForm({ ...form, category_id: Number(e.target.value) || '' })}>
                   <option value="">Sin categoría</option>
                   {categories.map((c: any) => <option key={c.id} value={c.id}>{c.icon} {c.name}</option>)}</select></div>
+              <div><label className="form-label">Empresa</label>
+                <select className="input" value={form.company_id} onChange={e => setForm({ ...form, company_id: Number(e.target.value) || '' })}>
+                  <option value="">Personal</option>
+                  {companies.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
             </div>
             <div className="form-row" style={{ marginTop: 12 }}>
               <div><label className="form-label">Fecha</label>
@@ -253,12 +307,16 @@ export default function GastosPage() {
           <div className="stat-label">Transacciones</div><div className="stat-value">{total}</div></div>
       </div>
 
-      {/* Search */}
-      <div className="card" style={{ padding: '12px 16px', marginBottom: 16 }}>
-        <div style={{ position: 'relative' }}>
+      {/* Search and Filters */}
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input className="input" placeholder="Buscar gastos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: 36 }} />
         </div>
+        <select className="input" style={{ width: 180 }} value={filterCompany} onChange={e => setFilterCompany(Number(e.target.value) || '')}>
+          <option value="">Todas las empresas</option>
+          {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
       </div>
 
       {/* Desktop Table */}
@@ -266,7 +324,7 @@ export default function GastosPage() {
         <table className="gastos-table">
           <thead>
             <tr>
-              {['Descripción', 'Categoría', 'Monto', 'COP', 'Fecha', 'Tipo', 'Próximo pago', ''].map(h => (
+              {['Descripción', 'Empresa', 'Categoría', 'Monto', 'COP', 'Fecha', 'Tipo', 'Próximo pago', ''].map(h => (
                 <th key={h}>{h}</th>
               ))}
             </tr>
@@ -275,6 +333,7 @@ export default function GastosPage() {
             {expenses.map(g => (
               <tr key={g.id}>
                 <td><div className="exp-desc"><div className="exp-icon-sm"><ArrowDownRight size={14} /></div>{g.description}</div></td>
+                <td>{g.company_name ? <span className="badge" style={{ background: (g.company_color || '#10b981') + '18', color: g.company_color, fontSize: '0.7rem' }}>{g.company_name}</span> : <span className="text-muted text-xs">Personal</span>}</td>
                 <td>{g.category_name ? <span className="badge" style={{ background: (g.category_color || '#6366f1') + '18', color: g.category_color, fontSize: '0.7rem' }}>{g.category_icon} {g.category_name}</span> : '—'}</td>
                 <td><strong>{fmt(g.amount, g.currency_symbol)}</strong> <span className="text-xs text-muted">{g.currency_code}</span></td>
                 <td>{g.currency_code === 'COP' ? '—' : g.amount_cop ? <><div className="text-sm">≈ ${g.amount_cop.toLocaleString('es-CO', { maximumFractionDigits: 0 })}</div><div className="text-xxs text-muted">Tasa: {g.exchange_rate?.toFixed(2)}</div></> : <span className="text-xs" style={{ color: 'var(--color-warning)' }}>Sin conv.</span>}</td>
@@ -301,7 +360,10 @@ export default function GastosPage() {
               <div className="exp-desc"><div className="exp-icon-sm"><ArrowDownRight size={14} /></div>
                 <div>
                   <div className="gasto-card-name">{g.description}</div>
-                  {g.category_name && <span className="badge" style={{ background: (g.category_color || '#6366f1') + '18', color: g.category_color, fontSize: '0.65rem', marginTop: 2 }}>{g.category_icon} {g.category_name}</span>}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                    {g.company_name && <span className="badge" style={{ background: (g.company_color || '#10b981') + '18', color: g.company_color, fontSize: '0.65rem' }}>{g.company_name}</span>}
+                    {g.category_name && <span className="badge" style={{ background: (g.category_color || '#6366f1') + '18', color: g.category_color, fontSize: '0.65rem' }}>{g.category_icon} {g.category_name}</span>}
+                  </div>
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -369,7 +431,7 @@ export default function GastosPage() {
 
         .gastos-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 12px; flex-wrap: wrap; }
         .form-label { display: block; font-size: 0.76rem; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 4px; }
-        .form-grid { display: grid; grid-template-columns: 1.5fr 0.7fr 0.5fr 1fr; gap: 12px; align-items: end; }
+        .form-grid { display: grid; grid-template-columns: 1.5fr 0.7fr 0.5fr 1fr 1fr; gap: 12px; align-items: end; }
         .form-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .form-check { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--color-text-secondary); cursor: pointer; }
         .form-check input { accent-color: var(--color-accent); }

@@ -55,7 +55,7 @@ router.post('/login', async (req: Request, res: Response) => {
     const { email, password } = req.body
 
     if (!email || !password) {
-      res.status(400).json({ error: 'Email y contraseña son requeridos' })
+      res.status(400).json({ error: 'Usuario y contraseña son requeridos' })
       return
     }
 

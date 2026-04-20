@@ -10,14 +10,16 @@ router.use(authRequired)
 
 // GET /api/gastos — list expenses
 router.get('/', (req: AuthRequest, res: Response) => {
-  const { category, from, to, search, limit = '50', offset = '0' } = req.query
+  const { category, company, from, to, search, limit = '50', offset = '0' } = req.query
   const userId = req.user!.id
 
   let query = `
     SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+           comp.name as company_name, comp.color as company_color,
            cur.code as currency_code, cur.symbol as currency_symbol
     FROM expenses e
     LEFT JOIN categories c ON e.category_id = c.id
+    LEFT JOIN companies comp ON e.company_id = comp.id
     JOIN currencies cur ON e.currency_id = cur.id
     WHERE e.user_id = ?
   `
@@ -26,6 +28,10 @@ router.get('/', (req: AuthRequest, res: Response) => {
   if (category) {
     query += ' AND c.name = ?'
     params.push(category)
+  }
+  if (company) {
+    query += ' AND e.company_id = ?'
+    params.push(company)
   }
   if (from) {
     query += ' AND e.date >= ?'
@@ -278,7 +284,7 @@ router.get('/reports', (req: AuthRequest, res: Response) => {
 // POST /api/gastos — create expense
 router.post('/', (req: AuthRequest, res: Response) => {
   const {
-    description, amount, currency_id = 1, category_id, date,
+    description, amount, currency_id = 1, category_id, company_id, date,
     is_recurring, recurring_frequency, notes,
   } = req.body
   const userId = req.user!.id
@@ -322,20 +328,22 @@ router.post('/', (req: AuthRequest, res: Response) => {
   }
 
   const result = db.prepare(`
-    INSERT INTO expenses (description, amount, currency_id, amount_cop, exchange_rate, category_id, user_id, date, is_recurring, recurring_frequency, next_due_date, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO expenses (description, amount, currency_id, amount_cop, exchange_rate, category_id, company_id, user_id, date, is_recurring, recurring_frequency, next_due_date, notes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     description, amount, currency_id, amountCOP, exchangeRate,
-    category_id || null, userId,
+    category_id || null, company_id || null, userId,
     date || new Date().toISOString().split('T')[0],
     is_recurring ? 1 : 0, recurring_frequency || null, nextDueDate, notes || null,
   )
 
   const expense = db.prepare(`
     SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+           comp.name as company_name, comp.color as company_color,
            cur.code as currency_code, cur.symbol as currency_symbol
     FROM expenses e
     LEFT JOIN categories c ON e.category_id = c.id
+    LEFT JOIN companies comp ON e.company_id = comp.id
     JOIN currencies cur ON e.currency_id = cur.id
     WHERE e.id = ?
   `).get(result.lastInsertRowid)
@@ -347,7 +355,7 @@ router.post('/', (req: AuthRequest, res: Response) => {
 router.put('/:id', (req: AuthRequest, res: Response) => {
   const { id } = req.params
   const userId = req.user!.id
-  const { description, amount, currency_id, category_id, date, is_recurring, recurring_frequency, notes } = req.body
+  const { description, amount, currency_id, category_id, company_id, date, is_recurring, recurring_frequency, notes } = req.body
 
   const existing = db.prepare('SELECT id FROM expenses WHERE id = ? AND user_id = ?').get(id, userId)
   if (!existing) {
@@ -378,6 +386,7 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
         amount_cop = COALESCE(?, amount_cop),
         exchange_rate = COALESCE(?, exchange_rate),
         category_id = COALESCE(?, category_id),
+        company_id = COALESCE(?, company_id),
         date = COALESCE(?, date),
         is_recurring = COALESCE(?, is_recurring),
         recurring_frequency = COALESCE(?, recurring_frequency),
@@ -386,7 +395,7 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
     WHERE id = ? AND user_id = ?
   `).run(
     description, amount, currency_id, amountCOP, exchangeRate,
-    category_id, date,
+    category_id, company_id, date,
     is_recurring !== undefined ? (is_recurring ? 1 : 0) : null,
     recurring_frequency, notes,
     id, userId,
@@ -394,9 +403,11 @@ router.put('/:id', (req: AuthRequest, res: Response) => {
 
   const updated = db.prepare(`
     SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color,
+           comp.name as company_name, comp.color as company_color,
            cur.code as currency_code, cur.symbol as currency_symbol
     FROM expenses e
     LEFT JOIN categories c ON e.category_id = c.id
+    LEFT JOIN companies comp ON e.company_id = comp.id
     JOIN currencies cur ON e.currency_id = cur.id
     WHERE e.id = ?
   `).get(id)
@@ -478,6 +489,68 @@ router.delete('/categories/:id', (req: AuthRequest, res: Response) => {
   db.prepare('UPDATE expenses SET category_id = NULL WHERE category_id = ? AND user_id = ?').run(id, userId)
   db.prepare('DELETE FROM categories WHERE id = ? AND user_id = ?').run(id, userId)
   res.json({ message: 'Categoría eliminada' })
+})
+
+// GET /api/gastos/companies — list companies
+router.get('/companies', (req: AuthRequest, res: Response) => {
+  const companies = db.prepare(
+    'SELECT * FROM companies WHERE user_id = ? ORDER BY name'
+  ).all(req.user!.id)
+  res.json(companies)
+})
+
+// POST /api/gastos/companies — create company
+router.post('/companies', (req: AuthRequest, res: Response) => {
+  const { name, description, color } = req.body
+  if (!name) {
+    res.status(400).json({ error: 'Nombre de empresa requerido' })
+    return
+  }
+
+  const result = db.prepare(
+    'INSERT INTO companies (name, description, color, user_id) VALUES (?, ?, ?, ?)'
+  ).run(name, description || null, color || '#10b981', req.user!.id)
+
+  const company = db.prepare('SELECT * FROM companies WHERE id = ?').get(result.lastInsertRowid)
+  res.status(201).json(company)
+})
+
+// PUT /api/gastos/companies/:id — update company
+router.put('/companies/:id', (req: AuthRequest, res: Response) => {
+  const { id } = req.params
+  const { name, description, color } = req.body
+  const userId = req.user!.id
+
+  const existing = db.prepare('SELECT id FROM companies WHERE id = ? AND user_id = ?').get(id, userId)
+  if (!existing) {
+    res.status(404).json({ error: 'Empresa no encontrada' })
+    return
+  }
+
+  db.prepare(`
+    UPDATE companies SET name = COALESCE(?, name), description = COALESCE(?, description), color = COALESCE(?, color)
+    WHERE id = ?
+  `).run(name, description, color, id)
+
+  const updated = db.prepare('SELECT * FROM companies WHERE id = ?').get(id)
+  res.json(updated)
+})
+
+// DELETE /api/gastos/companies/:id — delete company
+router.delete('/companies/:id', (req: AuthRequest, res: Response) => {
+  const { id } = req.params
+  const userId = req.user!.id
+
+  const existing = db.prepare('SELECT id FROM companies WHERE id = ? AND user_id = ?').get(id, userId)
+  if (!existing) {
+    res.status(404).json({ error: 'Empresa no encontrada' })
+    return
+  }
+
+  // Set expenses using this company to null
+  db.prepare('UPDATE expenses SET company_id = NULL WHERE company_id = ? AND user_id = ?').run(id, userId)
+  db.prepare('DELETE FROM companies WHERE id = ? AND user_id = ?').run(id, userId)
+  res.json({ message: 'Empresa eliminada' })
 })
 
 export default router

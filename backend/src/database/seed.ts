@@ -14,7 +14,7 @@ export async function seedDatabase() {
   // Create admin user
   const hashedPassword = await bcrypt.hash('robert2026', 12)
   db.prepare('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)').run(
-    'Robert', 'robert@robertapp.com', hashedPassword, 'admin'
+    'Robert', 'robert', hashedPassword, 'admin'
   )
 
   // Consolidated categories
@@ -186,7 +186,7 @@ export async function seedDatabase() {
   }
 
   console.log('✅ Database seeded successfully')
-  console.log(`   👤 User: robert@robertapp.com / robert2026`)
+  console.log(`   👤 User: robert / robert2026`)
   console.log(`   📁 ${categories.length} categories`)
   console.log(`   🏦 ${banks.length} banks`)
   console.log(`   💰 6 cajitas (${DAYS} días de interés diario)`)

@@ -95,11 +95,11 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-              Correo electrónico
+              Usuario
             </label>
             <div style={{ position: 'relative' }}>
               <Mail size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-              <input className="input" type="email" placeholder="tu@email.com" value={email}
+              <input className="input" type="text" placeholder="Tu usuario" value={email}
                 onChange={e => setEmail(e.target.value)} style={{ paddingLeft: 38 }} id="login-email" required />
             </div>
           </div>
@@ -131,10 +131,6 @@ export default function LoginPage() {
             ) : 'Iniciar Sesión'}
           </button>
         </form>
-
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-          Demo: <strong>robert@robertapp.com</strong> / <strong>robert2026</strong>
-        </div>
       </div>
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }

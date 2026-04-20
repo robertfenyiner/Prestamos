@@ -61,6 +61,16 @@ export function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Empresas / Perfiles
+    CREATE TABLE IF NOT EXISTS companies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      color TEXT DEFAULT '#10b981',
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Gastos (con soporte multi-moneda)
     CREATE TABLE IF NOT EXISTS expenses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,6 +80,7 @@ export function initDatabase() {
       amount_cop REAL,
       exchange_rate REAL,
       category_id INTEGER REFERENCES categories(id),
+      company_id INTEGER REFERENCES companies(id),
       user_id INTEGER NOT NULL REFERENCES users(id),
       date DATE NOT NULL DEFAULT (date('now')),
       is_recurring INTEGER DEFAULT 0,
