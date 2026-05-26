@@ -127,7 +127,7 @@ export const ahorrosAPI = {
   createBox: (data: { name: string; bank_id: number; goal?: number; balance?: number }) =>
     api.post('/ahorros/boxes', data),
   updateBox: (id: number, data: { name?: string; bank_id?: number; goal?: number }) =>
-    api.put(`/ahorros/boxes/${id}`),
+    api.put(`/ahorros/boxes/${id}`, data),
   deleteBox: (id: number) =>
     api.delete(`/ahorros/boxes/${id}`),
   addMovement: (boxId: number, data: { type: string; amount: number; description?: string; date?: string }) =>
