@@ -3,6 +3,7 @@ import MainLayout from '@/components/layout/MainLayout'
 import DashboardPage from '@/modules/dashboard/DashboardPage'
 import GastosPage from '@/modules/gastos/GastosPage'
 import AhorrosPage from '@/modules/ahorros/AhorrosPage'
+import CreditCardsPage from '@/modules/credit-cards/CreditCardsPage'
 import ReportesPage from '@/modules/reportes/ReportesPage'
 import NotificacionesPage from '@/modules/notificaciones/NotificacionesPage'
 import SettingsPage from '@/modules/settings/SettingsPage'
@@ -15,39 +16,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'var(--color-bg-primary)',
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12,
-        }}>
-          <div style={{
-            width: 40, height: 40,
-            border: '3px solid var(--color-border)',
-            borderTop: '3px solid var(--color-accent)',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-          }} />
-          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-            Cargando...
-          </span>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-bg-primary)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, border: '3px solid var(--color-border)', borderTop: '3px solid var(--color-accent)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>Cargando...</span>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     )
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
-  }
-
+  if (!isAuthenticated) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
@@ -55,16 +34,13 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route element={
-        <ProtectedRoute>
-          <MainLayout />
-        </ProtectedRoute>
-      }>
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/gastos" element={<GastosPage />} />
         <Route path="/reportes" element={<ReportesPage />} />
         <Route path="/ahorros" element={<AhorrosPage />} />
+        <Route path="/tarjetas" element={<CreditCardsPage />} />
         <Route path="/notificaciones" element={<NotificacionesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
