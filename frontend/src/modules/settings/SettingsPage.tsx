@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const [testingEmail, setTestingEmail] = useState(false)
   const [testingWhatsApp, setTestingWhatsApp] = useState(false)
   const [sendingWhatsAppReport, setSendingWhatsAppReport] = useState(false)
+  const [sendingTelegramReport, setSendingTelegramReport] = useState(false)
   const [checkingWhatsApp, setCheckingWhatsApp] = useState(false)
   const [sendingReport, setSendingReport] = useState(false)
   const [whatsAppStatus, setWhatsAppStatus] = useState<any>(null)
@@ -138,6 +139,18 @@ export default function SettingsPage() {
       showMsg('error', err.response?.data?.error || 'Error al enviar mensaje de Telegram')
     }
     setTestingTg(false)
+  }
+
+  const handleSendTelegramFinanceReport = async () => {
+    setSendingTelegramReport(true)
+    await saveFirst()
+    try {
+      const r = await notificationsAPI.sendTelegramReport()
+      showMsg('success', r.data.message || 'Reporte financiero enviado por Telegram')
+    } catch (err: any) {
+      showMsg('error', err.response?.data?.error || 'Error al enviar reporte por Telegram')
+    }
+    setSendingTelegramReport(false)
   }
 
   const handleTestWhatsApp = async () => {
@@ -321,7 +334,7 @@ export default function SettingsPage() {
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Telegram</h3>
-              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Resumen diario de ganancias de tus cajitas</p>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Resumen diario y reportes financieros</p>
             </div>
           </div>
 
@@ -337,20 +350,16 @@ export default function SettingsPage() {
               </label>
               <input className="input" type="text" value={form.telegram_chat_id}
                 onChange={e => setForm({ ...form, telegram_chat_id: e.target.value })}
-                placeholder="Ej: 123456789"
+                placeholder="Ej: 7559796631"
                 disabled={!form.telegram_enabled} />
             </div>
 
             <div style={{ padding: '12px 14px', borderRadius: 8, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', fontSize: '0.78rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <Info size={14} style={{ color: 'var(--color-accent)' }} />
-                <strong style={{ color: 'var(--color-text-primary)' }}>¿Cómo obtener tu Chat ID?</strong>
+                <strong style={{ color: 'var(--color-text-primary)' }}>Telegram configurado como canal redundante</strong>
               </div>
-              <ol style={{ margin: 0, paddingLeft: 18 }}>
-                <li>Abre Telegram y busca <strong>@userinfobot</strong></li>
-                <li>Envíale cualquier mensaje</li>
-                <li>Te responderá con tu <strong>Chat ID</strong></li>
-              </ol>
+              <p style={{ margin: 0 }}>Guarda tu Chat ID y usa los botones de prueba/reporte para confirmar recepción.</p>
             </div>
 
             <button className="btn btn-primary" onClick={handleTestTelegram}
@@ -358,6 +367,13 @@ export default function SettingsPage() {
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px' }}>
               {testingTg ? <Loader2 size={16} className="loading-spin" /> : <Send size={16} />}
               {testingTg ? 'Enviando...' : 'Enviar Mensaje de Prueba'}
+            </button>
+
+            <button className="btn" onClick={handleSendTelegramFinanceReport}
+              disabled={sendingTelegramReport || !form.telegram_chat_id || !form.telegram_enabled}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
+              {sendingTelegramReport ? <Loader2 size={16} className="loading-spin" /> : <Zap size={16} />}
+              {sendingTelegramReport ? 'Enviando...' : 'Enviar Reporte Financiero'}
             </button>
 
             <button className="btn" onClick={handleSendReport}
@@ -418,7 +434,7 @@ export default function SettingsPage() {
 
         <div className="card" style={{ padding: 16, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
           <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.6 }}>
-            📱 <strong>Telegram:</strong> Recibirás un resumen diario con las ganancias de cada cajita de ahorro.<br />
+            📱 <strong>Telegram:</strong> Canal redundante para reportes financieros y resumen de cajitas.<br />
             💬 <strong>WhatsApp:</strong> Disponible para pruebas y reportes financieros vía Whatsper.<br />
             📧 <strong>Email:</strong> Recibirás recordatorios de gastos recurrentes próximos a vencer.<br />
             🔐 <strong>Seguridad:</strong> Usa una contraseña única y privada para esta aplicación.
