@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   Send, Loader2, CheckCircle, AlertCircle, Save,
-  Mail, Info, Zap, Lock, KeyRound,
+  Mail, Info, Zap, Lock, KeyRound, MessageCircle, RefreshCw,
 } from 'lucide-react'
 import { authAPI, notificationsAPI } from '@/lib/api'
 
@@ -12,7 +12,10 @@ export default function SettingsPage() {
   const [changingPassword, setChangingPassword] = useState(false)
   const [testingTg, setTestingTg] = useState(false)
   const [testingEmail, setTestingEmail] = useState(false)
+  const [testingWhatsApp, setTestingWhatsApp] = useState(false)
+  const [checkingWhatsApp, setCheckingWhatsApp] = useState(false)
   const [sendingReport, setSendingReport] = useState(false)
+  const [whatsAppStatus, setWhatsAppStatus] = useState<any>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   const [form, setForm] = useState({
@@ -43,11 +46,28 @@ export default function SettingsPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false))
+
+    refreshWhatsAppStatus(false)
   }, [])
 
   const showMsg = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text })
     setTimeout(() => setMessage(null), 6000)
+  }
+
+  const refreshWhatsAppStatus = async (notify = true) => {
+    setCheckingWhatsApp(true)
+    try {
+      const r = await notificationsAPI.getWhatsAppStatus()
+      setWhatsAppStatus(r.data)
+      if (notify) {
+        const sessionStatus = r.data.session?.whatsapp_status || r.data.session?.status
+        showMsg('success', sessionStatus ? `Estado de WhatsApp: ${sessionStatus}` : 'Estado de WhatsApp consultado')
+      }
+    } catch (err: any) {
+      showMsg('error', err.response?.data?.error || 'Error al consultar WhatsApp')
+    }
+    setCheckingWhatsApp(false)
   }
 
   const handleSave = async () => {
@@ -119,6 +139,18 @@ export default function SettingsPage() {
     setTestingTg(false)
   }
 
+  const handleTestWhatsApp = async () => {
+    setTestingWhatsApp(true)
+    try {
+      const r = await notificationsAPI.testWhatsApp()
+      await refreshWhatsAppStatus(false)
+      showMsg('success', r.data.message || 'Mensaje de prueba enviado por WhatsApp')
+    } catch (err: any) {
+      showMsg('error', err.response?.data?.error || 'Error al enviar WhatsApp')
+    }
+    setTestingWhatsApp(false)
+  }
+
   const handleSendReport = async () => {
     setSendingReport(true)
     await saveFirst()
@@ -149,6 +181,10 @@ export default function SettingsPage() {
       </div>
     </div>
   )
+
+  const whatsAppConfigured = !!whatsAppStatus?.configured
+  const whatsAppSessionStatus = whatsAppStatus?.session?.whatsapp_status || whatsAppStatus?.session?.status || 'No consultado'
+  const whatsAppTo = whatsAppStatus?.config?.to || 'No configurado'
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
@@ -211,6 +247,51 @@ export default function SettingsPage() {
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px' }}>
               {changingPassword ? <Loader2 size={16} className="loading-spin" /> : <KeyRound size={16} />}
               {changingPassword ? 'Actualizando...' : 'Cambiar Contraseña'}
+            </button>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #22c55e22, #22c55e11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e' }}>
+              <MessageCircle size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>WhatsApp</h3>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Pruebas y estado de WhatsApp vía Whatsper</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: '12px 14px', borderRadius: 8, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', fontSize: '0.78rem', lineHeight: 1.6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Configuración:</span>
+                <strong style={{ color: whatsAppConfigured ? 'var(--color-success)' : 'var(--color-danger)' }}>{whatsAppConfigured ? 'Completa' : 'Incompleta'}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Sesión:</span>
+                <strong>{whatsAppSessionStatus}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                <span style={{ color: 'var(--color-text-muted)' }}>Destino:</span>
+                <strong>{whatsAppTo}</strong>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '0.76rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.5 }}>
+              El token, sesión y número destino se configuran en el archivo <code>.env</code> del servidor. No se muestran secretos en este panel.
+            </p>
+
+            <button className="btn" onClick={() => refreshWhatsAppStatus(true)} disabled={checkingWhatsApp}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
+              {checkingWhatsApp ? <Loader2 size={16} className="loading-spin" /> : <RefreshCw size={16} />}
+              {checkingWhatsApp ? 'Consultando...' : 'Verificar Estado'}
+            </button>
+
+            <button className="btn btn-primary" onClick={handleTestWhatsApp} disabled={testingWhatsApp || !whatsAppConfigured}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px' }}>
+              {testingWhatsApp ? <Loader2 size={16} className="loading-spin" /> : <MessageCircle size={16} />}
+              {testingWhatsApp ? 'Enviando...' : 'Enviar WhatsApp de Prueba'}
             </button>
           </div>
         </div>
@@ -320,6 +401,7 @@ export default function SettingsPage() {
         <div className="card" style={{ padding: 16, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
           <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.6 }}>
             📱 <strong>Telegram:</strong> Recibirás un resumen diario con las ganancias de cada cajita de ahorro.<br />
+            💬 <strong>WhatsApp:</strong> Disponible para pruebas y próximos reportes vía Whatsper.<br />
             📧 <strong>Email:</strong> Recibirás recordatorios de gastos recurrentes próximos a vencer.<br />
             🔐 <strong>Seguridad:</strong> Usa una contraseña única y privada para esta aplicación.
           </p>
