@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Receipt, PiggyBank, Settings,
-  ChevronLeft, ChevronRight, LogOut, BarChart3, Bell,
+  ChevronLeft, ChevronRight, LogOut, BarChart3, Bell, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -18,6 +18,7 @@ const navItems = [
     { to: '/gastos', label: 'Gastos', icon: Receipt },
     { to: '/reportes', label: 'Reportes', icon: BarChart3 },
     { to: '/ahorros', label: 'Ahorros', icon: PiggyBank },
+    { to: '/tarjetas', label: 'Tarjetas', icon: CreditCard },
   ]},
   { section: 'Sistema', items: [
     { to: '/notificaciones', label: 'Notificaciones', icon: Bell },
