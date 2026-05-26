@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express'
 import fs from 'fs'
 import jwt from 'jsonwebtoken'
 import db from '../../database'
-import { authRequired, type AuthRequest } from '../../middleware/auth'
+import { authRequired, type AuthRequest, JWT_SECRET } from '../../middleware/auth'
 import { expenseUpload } from '../../middleware/upload'
 
 const router = Router()
@@ -91,7 +91,7 @@ router.get('/download/:fileId', (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'robertapp-secret-2026') as any
+    const decoded = jwt.verify(token, JWT_SECRET) as any
     userId = decoded.id
   } catch {
     res.status(401).json({ error: 'Token inválido' })
