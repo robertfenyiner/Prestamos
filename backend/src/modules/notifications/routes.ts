@@ -4,6 +4,7 @@ import { authRequired, type AuthRequest } from '../../middleware/auth'
 import { sendTestEmail, sendRecurringExpenseReminder } from '../../services/emailService'
 import { sendTestTelegramMessage, sendDailySavingsReport } from '../../services/telegramService'
 import { processDueRecurringExpenses } from '../../services/recurringService'
+import { getWhatsAppConfigStatus, getWhatsAppSessionStatus, sendTestWhatsAppMessage } from '../../services/whatsperService'
 
 const router = Router()
 router.use(authRequired)
@@ -96,6 +97,48 @@ router.post('/test-telegram', async (req: AuthRequest, res: Response) => {
   } catch (err: any) {
     console.error('Test telegram error:', err)
     res.status(500).json({ error: `Error al enviar mensaje de Telegram: ${err.message}` })
+  }
+})
+
+// GET /api/notifications/whatsapp/status — check WhatsApp/Whatsper configuration and session status
+router.get('/whatsapp/status', async (_req: AuthRequest, res: Response) => {
+  const config = getWhatsAppConfigStatus()
+
+  if (!config.configured) {
+    res.json({
+      configured: false,
+      config,
+      session: null,
+      message: 'WhatsApp no configurado completamente en el servidor',
+    })
+    return
+  }
+
+  try {
+    const status = await getWhatsAppSessionStatus()
+    res.json({
+      configured: true,
+      config,
+      session: status.data || status,
+    })
+  } catch (err: any) {
+    console.error('WhatsApp status error:', err)
+    res.status(500).json({
+      configured: true,
+      config,
+      error: err.response?.data || err.message,
+    })
+  }
+})
+
+// POST /api/notifications/whatsapp/test — send test WhatsApp message
+router.post('/whatsapp/test', async (_req: AuthRequest, res: Response) => {
+  try {
+    const result = await sendTestWhatsAppMessage()
+    res.json({ message: 'Mensaje de prueba enviado por WhatsApp', result })
+  } catch (err: any) {
+    console.error('WhatsApp test error:', err)
+    res.status(500).json({ error: `Error al enviar WhatsApp: ${err.response?.data?.message || err.message}` })
   }
 })
 
