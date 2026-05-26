@@ -13,15 +13,13 @@ import dashboardRoutes from './modules/dashboard/routes'
 import currenciesRoutes from './modules/currencies/routes'
 import filesRoutes from './modules/files/routes'
 import notificationsRoutes, { startNotificationScheduler } from './modules/notifications/routes'
+import creditCardsRoutes from './modules/credit-cards/routes'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3001
 
-// Trust the first reverse proxy in production deployments such as Nginx.
-// This keeps express-rate-limit accurate when X-Forwarded-For is present.
 app.set('trust proxy', 1)
 
-// ===== Middleware =====
 app.use(helmet({ contentSecurityPolicy: false }))
 app.use(cors({
   origin: [
@@ -34,7 +32,6 @@ app.use(cors({
 }))
 app.use(express.json({ limit: '10mb' }))
 
-// Rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 500,
@@ -43,7 +40,6 @@ const limiter = rateLimit({
 })
 app.use('/api/', limiter)
 
-// Auth rate limit (stricter)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
@@ -52,7 +48,6 @@ const authLimiter = rateLimit({
 app.use('/api/auth/login', authLimiter)
 app.use('/api/auth/register', authLimiter)
 
-// ===== Routes =====
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'OK',
@@ -69,15 +64,12 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/currencies', currenciesRoutes)
 app.use('/api/files', filesRoutes)
 app.use('/api/notifications', notificationsRoutes)
+app.use('/api/credit-cards', creditCardsRoutes)
 
-// ===== Error Handling =====
 app.use(notFound)
 app.use(errorHandler)
 
-// ===== Start =====
 initDatabase()
-
-// Update exchange rates on startup
 updateExchangeRates().catch(err => console.error('Initial rate update failed:', err.message))
 
 app.listen(PORT, '0.0.0.0', () => {
@@ -90,8 +82,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  ║  Env:       ${process.env.NODE_ENV || 'development'}              ║`)
   console.log('  ╚══════════════════════════════════════════╝')
   console.log('')
-
-  // Start notification scheduler
   startNotificationScheduler()
 })
 
