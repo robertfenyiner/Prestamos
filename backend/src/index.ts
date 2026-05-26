@@ -17,6 +17,10 @@ import notificationsRoutes, { startNotificationScheduler } from './modules/notif
 const app = express()
 const PORT = Number(process.env.PORT) || 3001
 
+// Trust the first reverse proxy in production deployments such as Nginx.
+// This keeps express-rate-limit accurate when X-Forwarded-For is present.
+app.set('trust proxy', 1)
+
 // ===== Middleware =====
 app.use(helmet({ contentSecurityPolicy: false }))
 app.use(cors({
