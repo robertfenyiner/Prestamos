@@ -326,8 +326,6 @@ export async function checkAndNotifyDailySavings() {
       ORDER BY sb.balance DESC
     `).all(settings.user_id) as any[]
 
-    if (boxes.length === 0) continue
-
     // Calculate total interest earned all-time from movements
     const totalInterestResult = db.prepare(`
       SELECT COALESCE(SUM(sm.amount), 0) as total
