@@ -156,6 +156,7 @@ export const notificationsAPI = {
   }) => api.put('/notifications/settings', data),
   sendTest: () => api.post('/notifications/test'),
   testTelegram: () => api.post('/notifications/test-telegram'),
+  sendTelegramReport: () => api.post('/notifications/telegram/report'),
   getWhatsAppStatus: () => api.get('/notifications/whatsapp/status'),
   testWhatsApp: () => api.post('/notifications/whatsapp/test'),
   sendWhatsAppReport: () => api.post('/notifications/whatsapp/report'),
