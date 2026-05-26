@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import {
-  Settings, Send, Loader2, CheckCircle, AlertCircle, Save, User,
-  Bell, Mail, MessageCircle, Info, Zap,
+  Send, Loader2, CheckCircle, AlertCircle, Save,
+  Mail, Info, Zap, Lock, KeyRound,
 } from 'lucide-react'
-import { notificationsAPI } from '@/lib/api'
+import { authAPI, notificationsAPI } from '@/lib/api'
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
   const [testingTg, setTestingTg] = useState(false)
   const [testingEmail, setTestingEmail] = useState(false)
   const [sendingReport, setSendingReport] = useState(false)
@@ -20,6 +21,12 @@ export default function SettingsPage() {
     telegram_enabled: false,
     telegram_chat_id: '',
     notify_days_before: 1,
+  })
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
   })
 
   useEffect(() => {
@@ -53,6 +60,31 @@ export default function SettingsPage() {
       showMsg('error', err.response?.data?.error || 'Error al guardar')
     }
     setSaving(false)
+  }
+
+  const handleChangePassword = async () => {
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      showMsg('error', 'Completa todos los campos de contraseña')
+      return
+    }
+    if (passwordForm.newPassword.length < 8) {
+      showMsg('error', 'La nueva contraseña debe tener al menos 8 caracteres')
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showMsg('error', 'La nueva contraseña y la confirmación no coinciden')
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      const r = await authAPI.changePassword(passwordForm)
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      showMsg('success', r.data.message || 'Contraseña actualizada correctamente')
+    } catch (err: any) {
+      showMsg('error', err.response?.data?.error || 'Error al cambiar la contraseña')
+    }
+    setChangingPassword(false)
   }
 
   // Auto-save before any test action
@@ -126,13 +158,11 @@ export default function SettingsPage() {
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 className="page-title">Configuración</h1>
-        <p className="page-subtitle">Gestiona tus preferencias de notificaciones</p>
+        <p className="page-subtitle">Gestiona tus preferencias de seguridad y notificaciones</p>
       </div>
 
-      {/* Message */}
       {message && (
         <div className="card animate-fade-in" style={{
           padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10,
@@ -146,7 +176,45 @@ export default function SettingsPage() {
       )}
 
       <div className="settings-grid">
-        {/* ===== Telegram Section ===== */}
+        <div className="card" style={{ padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-accent)' }}>
+              <Lock size={20} />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>Seguridad</h3>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>Cambia tu contraseña de acceso</p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Contraseña actual</label>
+              <input className="input" type="password" value={passwordForm.currentPassword}
+                onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                autoComplete="current-password" />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Nueva contraseña</label>
+              <input className="input" type="password" value={passwordForm.newPassword}
+                onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                autoComplete="new-password" />
+              <p style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', margin: '6px 0 0' }}>Mínimo 8 caracteres.</p>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 4 }}>Confirmar nueva contraseña</label>
+              <input className="input" type="password" value={passwordForm.confirmPassword}
+                onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                autoComplete="new-password" />
+            </div>
+            <button className="btn btn-primary" onClick={handleChangePassword} disabled={changingPassword}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px' }}>
+              {changingPassword ? <Loader2 size={16} className="loading-spin" /> : <KeyRound size={16} />}
+              {changingPassword ? 'Actualizando...' : 'Cambiar Contraseña'}
+            </button>
+          </div>
+        </div>
+
         <div className="card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #0088cc22, #0088cc11)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0088cc' }}>
@@ -159,13 +227,11 @@ export default function SettingsPage() {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Enable toggle */}
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
               <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Activar notificaciones por Telegram</span>
               <Toggle checked={form.telegram_enabled} onChange={v => setForm({ ...form, telegram_enabled: v })} />
             </label>
 
-            {/* Chat ID */}
             <div>
               <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 4 }}>
                 Chat ID de Telegram
@@ -176,7 +242,6 @@ export default function SettingsPage() {
                 disabled={!form.telegram_enabled} />
             </div>
 
-            {/* Instructions */}
             <div style={{ padding: '12px 14px', borderRadius: 8, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', fontSize: '0.78rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                 <Info size={14} style={{ color: 'var(--color-accent)' }} />
@@ -185,12 +250,10 @@ export default function SettingsPage() {
               <ol style={{ margin: 0, paddingLeft: 18 }}>
                 <li>Abre Telegram y busca <strong>@userinfobot</strong></li>
                 <li>Envíale cualquier mensaje</li>
-                <li>Te responderá con tu <strong>Chat ID</strong> (número)</li>
-                <li>Pega ese número aquí arriba</li>
+                <li>Te responderá con tu <strong>Chat ID</strong></li>
               </ol>
             </div>
 
-            {/* Test button */}
             <button className="btn btn-primary" onClick={handleTestTelegram}
               disabled={testingTg || !form.telegram_chat_id || !form.telegram_enabled}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px' }}>
@@ -198,7 +261,6 @@ export default function SettingsPage() {
               {testingTg ? 'Enviando...' : 'Enviar Mensaje de Prueba'}
             </button>
 
-            {/* Send daily report now */}
             <button className="btn" onClick={handleSendReport}
               disabled={sendingReport || !form.telegram_chat_id || !form.telegram_enabled}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 20px', background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
@@ -208,7 +270,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ===== Email Section ===== */}
         <div className="card" style={{ padding: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--color-accent-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-accent)' }}>
@@ -256,16 +317,15 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ===== Info Card ===== */}
-        <div className="card" style={{ padding: 16, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)', gridColumn: '1 / -1' }}>
+        <div className="card" style={{ padding: 16, background: 'var(--color-bg-elevated)', border: '1px solid var(--color-border)' }}>
           <p style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.6 }}>
-            📱 <strong>Telegram:</strong> Recibirás un resumen diario con las ganancias de cada cajita de ahorro (ejecutado cada 24h).<br />
-            📧 <strong>Email:</strong> Recibirás recordatorios de gastos recurrentes próximos a vencer (ejecutado cada 12h).
+            📱 <strong>Telegram:</strong> Recibirás un resumen diario con las ganancias de cada cajita de ahorro.<br />
+            📧 <strong>Email:</strong> Recibirás recordatorios de gastos recurrentes próximos a vencer.<br />
+            🔐 <strong>Seguridad:</strong> Usa una contraseña única y privada para esta aplicación.
           </p>
         </div>
       </div>
 
-      {/* Save button (floating) */}
       <div style={{ position: 'sticky', bottom: 16, marginTop: 20, display: 'flex', justifyContent: 'center' }}>
         <button className="btn btn-success" onClick={handleSave} disabled={saving}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 32px', fontSize: '0.92rem', boxShadow: 'var(--shadow-lg)' }}>
