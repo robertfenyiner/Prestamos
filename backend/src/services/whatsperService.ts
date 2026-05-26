@@ -73,6 +73,48 @@ export async function sendTestWhatsAppMessage() {
   return sendWhatsAppMessage(`✅ RobertApp: WhatsApp configurado correctamente.\n\nFecha: ${timestamp}`)
 }
 
+export async function sendWhatsAppFinanceReport(report: WhatsAppFinanceReport) {
+  return sendWhatsAppMessage(formatFinanceReport(report))
+}
+
+export interface WhatsAppFinanceReport {
+  userName: string
+  generatedAt: string
+  todayExpensesCOP: number
+  monthExpensesCOP: number
+  monthExpensesCount: number
+  savingsBalanceCOP: number
+  savingsBoxesCount: number
+  upcomingRecurringCount: number
+  upcomingRecurringTotalCOP: number
+  topCategoryName?: string | null
+  topCategoryTotalCOP?: number | null
+}
+
+function formatFinanceReport(report: WhatsAppFinanceReport) {
+  const topCategory = report.topCategoryName
+    ? `${report.topCategoryName}: ${formatCOP(report.topCategoryTotalCOP || 0)}`
+    : 'Sin datos'
+
+  return [
+    '📊 RobertApp — Reporte financiero',
+    '',
+    `👤 Usuario: ${report.userName}`,
+    `🕒 Generado: ${report.generatedAt}`,
+    '',
+    `💸 Gastos de hoy: ${formatCOP(report.todayExpensesCOP)}`,
+    `📅 Gastos del mes: ${formatCOP(report.monthExpensesCOP)} (${report.monthExpensesCount})`,
+    `🏷️ Categoría principal: ${topCategory}`,
+    '',
+    `🏦 Ahorros actuales: ${formatCOP(report.savingsBalanceCOP)} en ${report.savingsBoxesCount} cajita(s)`,
+    `⚠️ Recurrentes próximos: ${report.upcomingRecurringCount} por ${formatCOP(report.upcomingRecurringTotalCOP)}`,
+  ].join('\n')
+}
+
+function formatCOP(value: number) {
+  return '$' + Math.round(value || 0).toLocaleString('es-CO')
+}
+
 function maskValue(value: string) {
   if (value.length <= 4) return '****'
   return `${'*'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`
