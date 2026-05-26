@@ -9,6 +9,20 @@ interface TelegramResponse {
   description?: string
 }
 
+export interface TelegramFinanceReport {
+  userName: string
+  generatedAt: string
+  todayExpensesCOP: number
+  monthExpensesCOP: number
+  monthExpensesCount: number
+  savingsBalanceCOP: number
+  savingsBoxesCount: number
+  upcomingRecurringCount: number
+  upcomingRecurringTotalCOP: number
+  topCategoryName?: string | null
+  topCategoryTotalCOP?: number | null
+}
+
 export async function sendTelegramMessage(chatId: string, text: string, parseMode: string = 'HTML'): Promise<TelegramResponse> {
   if (!TELEGRAM_BOT_TOKEN) {
     throw new Error('TELEGRAM_BOT_TOKEN no configurado en .env')
@@ -62,7 +76,7 @@ export async function sendDailySavingsReport(chatId: string, boxes: any[], total
     totalBalance += box.balance
 
     lines.push(
-      `💰 <b>${box.name}</b>\n` +
+      `💰 <b>${escapeHtml(box.name)}</b>\n` +
       `   +${fmt(dailyEarnings)} hoy | Saldo: ${fmt(box.balance)} | ${box.bank_rate}% EA`
     )
   }
@@ -87,4 +101,33 @@ export async function sendTestTelegramMessage(chatId: string) {
     `🤖 <i>Mensaje enviado desde RobertApp</i>`
 
   return sendTelegramMessage(chatId, message)
+}
+
+export async function sendTelegramFinanceReport(chatId: string, report: TelegramFinanceReport) {
+  const topCategory = report.topCategoryName
+    ? `${escapeHtml(report.topCategoryName)}: ${formatCOP(report.topCategoryTotalCOP || 0)}`
+    : 'Sin datos'
+
+  const message =
+    `📊 <b>RobertApp — Reporte financiero</b>\n\n` +
+    `👤 <b>Usuario:</b> ${escapeHtml(report.userName)}\n` +
+    `🕒 <b>Generado:</b> ${escapeHtml(report.generatedAt)}\n\n` +
+    `💸 <b>Gastos de hoy:</b> ${formatCOP(report.todayExpensesCOP)}\n` +
+    `📅 <b>Gastos del mes:</b> ${formatCOP(report.monthExpensesCOP)} (${report.monthExpensesCount})\n` +
+    `🏷️ <b>Categoría principal:</b> ${topCategory}\n\n` +
+    `🏦 <b>Ahorros actuales:</b> ${formatCOP(report.savingsBalanceCOP)} en ${report.savingsBoxesCount} cajita(s)\n` +
+    `⚠️ <b>Recurrentes próximos:</b> ${report.upcomingRecurringCount} por ${formatCOP(report.upcomingRecurringTotalCOP)}`
+
+  return sendTelegramMessage(chatId, message)
+}
+
+function formatCOP(value: number) {
+  return '$' + Math.round(value || 0).toLocaleString('es-CO')
+}
+
+function escapeHtml(value: string) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 }
