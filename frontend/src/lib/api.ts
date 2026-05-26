@@ -39,6 +39,8 @@ export const authAPI = {
   register: (name: string, email: string, password: string) =>
     api.post('/auth/register', { name, email, password }),
   me: () => api.get('/auth/me'),
+  changePassword: (data: { currentPassword: string; newPassword: string; confirmPassword: string }) =>
+    api.post('/auth/change-password', data),
 }
 
 // ===== Dashboard =====
@@ -157,4 +159,3 @@ export const notificationsAPI = {
   sendSavingsReport: () => api.post('/notifications/send-savings-report'),
   checkDue: () => api.post('/notifications/check-due'),
 }
-
