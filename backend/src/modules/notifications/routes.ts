@@ -16,8 +16,8 @@ router.get('/settings', (req: AuthRequest, res: Response) => {
 
   if (!settings) {
     db.prepare(`
-      INSERT INTO notification_settings (user_id, email_enabled, email_address, whatsapp_enabled, notify_days_before)
-      VALUES (?, 1, ?, 1, 1)
+      INSERT INTO notification_settings (user_id, email_enabled, email_address, whatsapp_enabled, notify_days_before, credit_card_notify_days_before)
+      VALUES (?, 1, ?, 1, 1, 3)
     `).run(userId, req.user!.email)
     settings = db.prepare('SELECT * FROM notification_settings WHERE user_id = ?').get(userId)
   }
@@ -28,13 +28,13 @@ router.get('/settings', (req: AuthRequest, res: Response) => {
 // PUT /api/notifications/settings
 router.put('/settings', (req: AuthRequest, res: Response) => {
   const userId = req.user!.id
-  const { email_enabled, email_address, telegram_enabled, telegram_chat_id, whatsapp_enabled, notify_days_before } = req.body
+  const { email_enabled, email_address, telegram_enabled, telegram_chat_id, whatsapp_enabled, notify_days_before, credit_card_notify_days_before } = req.body
 
   const existing = db.prepare('SELECT id FROM notification_settings WHERE user_id = ?').get(userId)
   if (!existing) {
     db.prepare(`
-      INSERT INTO notification_settings (user_id, email_enabled, email_address, whatsapp_enabled, notify_days_before)
-      VALUES (?, 1, ?, 1, 1)
+      INSERT INTO notification_settings (user_id, email_enabled, email_address, whatsapp_enabled, notify_days_before, credit_card_notify_days_before)
+      VALUES (?, 1, ?, 1, 1, 3)
     `).run(userId, req.user!.email)
   }
 
@@ -46,6 +46,7 @@ router.put('/settings', (req: AuthRequest, res: Response) => {
         telegram_chat_id = COALESCE(?, telegram_chat_id),
         whatsapp_enabled = COALESCE(?, whatsapp_enabled),
         notify_days_before = COALESCE(?, notify_days_before),
+        credit_card_notify_days_before = COALESCE(?, credit_card_notify_days_before),
         updated_at = CURRENT_TIMESTAMP
     WHERE user_id = ?
   `).run(
@@ -55,6 +56,7 @@ router.put('/settings', (req: AuthRequest, res: Response) => {
     telegram_chat_id,
     whatsapp_enabled !== undefined ? (whatsapp_enabled ? 1 : 0) : null,
     notify_days_before,
+    credit_card_notify_days_before,
     userId,
   )
 
