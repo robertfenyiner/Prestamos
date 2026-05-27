@@ -199,6 +199,8 @@ export function initDatabase() {
       principal_amount REAL NOT NULL,
       interest_amount REAL DEFAULT 0,
       total_amount REAL NOT NULL,
+      paid_amount REAL DEFAULT 0,
+      paid_at DATETIME,
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'paid', 'cancelled')),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -236,6 +238,8 @@ export function initDatabase() {
   ensureColumn('notification_settings', 'whatsapp_enabled', 'INTEGER DEFAULT 1')
   ensureColumn('expenses', 'payment_method', "TEXT DEFAULT 'cash'")
   ensureColumn('expenses', 'credit_card_id', 'INTEGER REFERENCES credit_cards(id)')
+  ensureColumn('credit_card_installments', 'paid_amount', 'REAL DEFAULT 0')
+  ensureColumn('credit_card_installments', 'paid_at', 'DATETIME')
 
   console.log('✅ Database initialized')
 }
