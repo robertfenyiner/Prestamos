@@ -113,7 +113,8 @@ export const notificationsAPI = {
     email_enabled?: boolean; email_address?: string;
     telegram_enabled?: boolean; telegram_chat_id?: string;
     whatsapp_enabled?: boolean;
-    notify_days_before?: number
+    notify_days_before?: number;
+    credit_card_notify_days_before?: number;
   }) => api.put('/notifications/settings', data),
   sendTest: () => api.post('/notifications/test'),
   testTelegram: () => api.post('/notifications/test-telegram'),
