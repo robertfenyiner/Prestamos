@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/opt/RobertApp}"
-DB_PATH="${DB_PATH:-$APP_DIR/backend/data/robertapp.db}"
-BACKUP_DIR="${BACKUP_DIR:-/opt/backups/robertapp}"
+APP_DIR="${APP_DIR:-/opt/Prestamos}"
+DB_PATH="${DB_PATH:-$APP_DIR/backend/data/prestamos.db}"
+BACKUP_DIR="${BACKUP_DIR:-/opt/backups/prestamos}"
 RETENTION_DAYS="${RETENTION_DAYS:-30}"
 MIN_TABLES="${MIN_TABLES:-5}"
 
@@ -20,7 +20,7 @@ fi
 mkdir -p "$BACKUP_DIR"
 
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
-BACKUP_FILE="$BACKUP_DIR/robertapp-$TIMESTAMP.db"
+BACKUP_FILE="$BACKUP_DIR/prestamos-$TIMESTAMP.db"
 COMPRESSED_FILE="$BACKUP_FILE.gz"
 
 SOURCE_INTEGRITY="$(sqlite3 "$DB_PATH" 'PRAGMA integrity_check;' | head -n 1)"
@@ -58,7 +58,7 @@ gzip -f "$BACKUP_FILE"
 chmod 600 "$COMPRESSED_FILE"
 
 # Remove old compressed backups.
-find "$BACKUP_DIR" -type f -name 'robertapp-*.db.gz' -mtime +"$RETENTION_DAYS" -delete
+find "$BACKUP_DIR" -type f -name 'prestamos-*.db.gz' -mtime +"$RETENTION_DAYS" -delete
 
 cat <<EOF
 Backup created: $COMPRESSED_FILE

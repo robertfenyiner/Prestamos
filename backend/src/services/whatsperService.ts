@@ -70,7 +70,7 @@ export async function sendWhatsAppMessage(content: string, toOverride?: string) 
 
 export async function sendTestWhatsAppMessage() {
   const timestamp = new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' })
-  return sendWhatsAppMessage(`✅ RobertApp: WhatsApp configurado correctamente.\n\nFecha: ${timestamp}`)
+  return sendWhatsAppMessage(`✅ Prestamos: WhatsApp configurado correctamente.\n\nFecha: ${timestamp}`)
 }
 
 export async function sendWhatsAppFinanceReport(report: WhatsAppFinanceReport) {
@@ -97,7 +97,7 @@ function formatFinanceReport(report: WhatsAppFinanceReport) {
     : 'Sin datos'
 
   return [
-    '📊 RobertApp — Reporte financiero',
+    '📊 Prestamos — Reporte financiero',
     '',
     `👤 Usuario: ${report.userName}`,
     `🕒 Generado: ${report.generatedAt}`,

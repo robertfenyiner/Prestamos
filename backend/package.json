@@ -1,7 +1,7 @@
 {
-  "name": "robertapp-backend",
+  "name": "prestamos-backend",
   "version": "1.0.0",
-  "description": "RobertApp — Backend API",
+  "description": "Prestamos — Backend API",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

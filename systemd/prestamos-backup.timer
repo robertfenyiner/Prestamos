@@ -1,10 +1,10 @@
 [Unit]
-Description=Run RobertApp SQLite backup daily
+Description=Run Prestamos SQLite backup daily
 
 [Timer]
 OnCalendar=*-*-* 03:15:00
 Persistent=true
-Unit=robertapp-backup.service
+Unit=prestamos-backup.service
 
 [Install]
 WantedBy=timers.target

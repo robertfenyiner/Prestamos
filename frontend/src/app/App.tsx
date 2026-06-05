@@ -1,11 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import MainLayout from '@/components/layout/MainLayout'
 import DashboardPage from '@/modules/dashboard/DashboardPage'
-import GastosPage from '@/modules/gastos/GastosPage'
-import AhorrosPage from '@/modules/ahorros/AhorrosPage'
-import CreditCardsPage from '@/modules/credit-cards/CreditCardsPage'
-import ReportesPage from '@/modules/reportes/ReportesPage'
-import NotificacionesPage from '@/modules/notificaciones/NotificacionesPage'
+import PrestamosPage from '@/modules/prestamos/PrestamosPage'
+import ClientesPage from '@/modules/clientes/ClientesPage'
 import SettingsPage from '@/modules/settings/SettingsPage'
 import LoginPage from '@/modules/auth/LoginPage'
 import { ThemeProvider } from '@/hooks/useTheme'
@@ -35,13 +32,15 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/prestamos" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/gastos" element={<GastosPage />} />
-        <Route path="/reportes" element={<ReportesPage />} />
-        <Route path="/ahorros" element={<AhorrosPage />} />
-        <Route path="/tarjetas" element={<CreditCardsPage />} />
-        <Route path="/notificaciones" element={<NotificacionesPage />} />
+        <Route path="/prestamos" element={<PrestamosPage />} />
+        <Route path="/clientes" element={<ClientesPage />} />
+        <Route path="/gastos" element={<Navigate to="/prestamos" replace />} />
+        <Route path="/reportes" element={<Navigate to="/prestamos" replace />} />
+        <Route path="/ahorros" element={<Navigate to="/prestamos" replace />} />
+        <Route path="/tarjetas" element={<Navigate to="/prestamos" replace />} />
+        <Route path="/notificaciones" element={<Navigate to="/prestamos" replace />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>

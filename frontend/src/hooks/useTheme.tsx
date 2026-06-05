@@ -11,7 +11,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    const stored = localStorage.getItem('robertapp-theme') as Theme
+    const stored = localStorage.getItem('prestamos-theme') as Theme
     return stored || 'dark'
   })
 
@@ -19,7 +19,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement
     root.classList.remove('dark', 'light')
     root.classList.add(theme)
-    localStorage.setItem('robertapp-theme', theme)
+    localStorage.setItem('prestamos-theme', theme)
   }, [theme])
 
   const toggleTheme = () => {

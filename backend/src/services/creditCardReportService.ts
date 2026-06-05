@@ -56,7 +56,7 @@ function formatCreditCardReportText(report: CreditCardReport) {
     : 'Sin cuotas próximas'
 
   return [
-    '💳 RobertApp — Reporte de tarjetas',
+    '💳 Prestamos — Reporte de tarjetas',
     '',
     `👤 Usuario: ${report.userName}`,
     `🕒 Generado: ${report.generatedAt}`,
@@ -92,7 +92,7 @@ function formatCreditCardReportHtml(report: CreditCardReport) {
     ).join('\n')
     : 'Sin cuotas próximas'
 
-  return `💳 <b>RobertApp — Reporte de tarjetas</b>\n\n` +
+  return `💳 <b>Prestamos — Reporte de tarjetas</b>\n\n` +
     `👤 <b>Usuario:</b> ${escapeHtml(report.userName)}\n` +
     `🕒 <b>Generado:</b> ${escapeHtml(report.generatedAt)}\n\n` +
     `💰 <b>Deuda estimada:</b> ${formatCOP(report.totalDebt)}\n` +

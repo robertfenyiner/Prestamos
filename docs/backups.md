@@ -1,13 +1,13 @@
-# Backups de RobertApp
+# Backups de Prestamos
 
-RobertApp usa SQLite en `backend/data/robertapp.db`. Este documento explica como activar backups diarios en Ubuntu con systemd.
+Prestamos usa SQLite en `backend/data/prestamos.db`. Este documento explica como activar backups diarios en Ubuntu con systemd.
 
 ## Archivos incluidos
 
 ```text
 scripts/backup-sqlite.sh
-systemd/robertapp-backup.service
-systemd/robertapp-backup.timer
+systemd/prestamos-backup.service
+systemd/prestamos-backup.timer
 ```
 
 ## Instalar dependencias
@@ -20,40 +20,40 @@ sudo apt install -y sqlite3 gzip
 ## Activar el script
 
 ```bash
-cd /opt/RobertApp
+cd /opt/Prestamos
 chmod +x scripts/backup-sqlite.sh
-sudo mkdir -p /opt/backups/robertapp
-sudo chown -R robert:robert /opt/backups/robertapp
+sudo mkdir -p /opt/backups/prestamos
+sudo chown -R robert:robert /opt/backups/prestamos
 ```
 
 ## Probar backup manual
 
 ```bash
-/opt/RobertApp/scripts/backup-sqlite.sh
-ls -lah /opt/backups/robertapp
+/opt/Prestamos/scripts/backup-sqlite.sh
+ls -lah /opt/backups/prestamos
 ```
 
 ## Instalar timer de systemd
 
 ```bash
-sudo cp /opt/RobertApp/systemd/robertapp-backup.service /etc/systemd/system/robertapp-backup.service
-sudo cp /opt/RobertApp/systemd/robertapp-backup.timer /etc/systemd/system/robertapp-backup.timer
+sudo cp /opt/Prestamos/systemd/prestamos-backup.service /etc/systemd/system/prestamos-backup.service
+sudo cp /opt/Prestamos/systemd/prestamos-backup.timer /etc/systemd/system/prestamos-backup.timer
 sudo systemctl daemon-reload
-sudo systemctl enable --now robertapp-backup.timer
+sudo systemctl enable --now prestamos-backup.timer
 ```
 
 ## Verificar estado
 
 ```bash
-systemctl list-timers --all | grep robertapp || true
-sudo systemctl status robertapp-backup.timer --no-pager
-sudo systemctl start robertapp-backup.service
-sudo systemctl status robertapp-backup.service --no-pager
-ls -lah /opt/backups/robertapp
+systemctl list-timers --all | grep prestamos || true
+sudo systemctl status prestamos-backup.timer --no-pager
+sudo systemctl start prestamos-backup.service
+sudo systemctl status prestamos-backup.service --no-pager
+ls -lah /opt/backups/prestamos
 ```
 
 ## Configuracion
 
-El backup conserva archivos por 30 dias por defecto. Se puede cambiar con `RETENTION_DAYS` en `systemd/robertapp-backup.service`.
+El backup conserva archivos por 30 dias por defecto. Se puede cambiar con `RETENTION_DAYS` en `systemd/prestamos-backup.service`.
 
-El backup se ejecuta todos los dias a las 03:15 segun `systemd/robertapp-backup.timer`.
+El backup se ejecuta todos los dias a las 03:15 segun `systemd/prestamos-backup.timer`.

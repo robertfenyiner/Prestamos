@@ -16,7 +16,7 @@ export async function sendEmail(to: string, subject: string, html: string) {
   }
 
   return transporter.sendMail({
-    from: `"RobertApp" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
+    from: `"Prestamos" <${process.env.EMAIL_FROM || process.env.EMAIL_USER}>`,
     to,
     subject,
     html,
@@ -59,7 +59,7 @@ export async function sendRecurringExpenseReminder(
   const html = `
   <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:600px;margin:0 auto;background:#1a1a2e;color:#e0e0e0;border-radius:12px;overflow:hidden;">
     <div style="background:linear-gradient(135deg,#6366f1,#a78bfa);padding:24px 28px;">
-      <h1 style="margin:0;font-size:22px;color:white;">💰 RobertApp — Recordatorio</h1>
+      <h1 style="margin:0;font-size:22px;color:white;">💰 Prestamos — Recordatorio</h1>
       <p style="margin:6px 0 0;font-size:14px;color:rgba(255,255,255,0.85);">Tienes ${expenses.length} gasto${expenses.length > 1 ? 's' : ''} recurrente${expenses.length > 1 ? 's' : ''} próximo${expenses.length > 1 ? 's' : ''} a vencer</p>
     </div>
     <div style="padding:16px 12px;">
@@ -86,7 +86,7 @@ export async function sendRecurringExpenseReminder(
       </div>` : ''}
     </div>
     <div style="padding:14px 24px;text-align:center;font-size:11px;color:#555;border-top:1px solid #2a2a3e;">
-      RobertApp • Gestión de Finanzas Personales
+      Prestamos • Gestión de Finanzas Personales
     </div>
   </div>`
 
@@ -100,13 +100,13 @@ export async function sendTestEmail(email: string) {
       <h1 style="margin:0;font-size:22px;color:white;">✅ Email de Prueba</h1>
     </div>
     <div style="padding:28px;text-align:center;">
-      <p style="font-size:16px;margin:0 0 8px;">¡Las notificaciones de <strong>RobertApp</strong> están configuradas correctamente!</p>
+      <p style="font-size:16px;margin:0 0 8px;">¡Las notificaciones de <strong>Prestamos</strong> están configuradas correctamente!</p>
       <p style="font-size:13px;color:#888;margin:0;">Recibirás recordatorios de tus gastos recurrentes por este medio.</p>
     </div>
     <div style="padding:14px 24px;text-align:center;font-size:11px;color:#555;border-top:1px solid #2a2a3e;">
-      RobertApp • Gestión de Finanzas Personales
+      Prestamos • Gestión de Finanzas Personales
     </div>
   </div>`
 
-  return sendEmail(email, '✅ RobertApp — Email de prueba', html)
+  return sendEmail(email, '✅ Prestamos — Email de prueba', html)
 }

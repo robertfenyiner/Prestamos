@@ -1,6 +1,6 @@
-# RobertApp
+# Prestamos
 
-RobertApp es un sistema integral de gestión de finanzas personales diseñado para controlar gastos multimoneda, cajitas de ahorro, y gestión de presupuesto, optimizado para ejecutarse en servidores Windows con alta disponibilidad.
+Prestamos es un sistema integral de gestión de finanzas personales diseñado para controlar gastos multimoneda, cajitas de ahorro, y gestión de presupuesto, optimizado para ejecutarse en servidores Windows con alta disponibilidad.
 
 ## Características
 
@@ -27,12 +27,12 @@ Asegúrate de contar con lo siguiente instalado en tu servidor:
 
 ### 2. Clonar el Repositorio
 
-Clona el proyecto en una ruta accesible, por ejemplo `C:\proyectos\RobertApp`:
+Clona el proyecto en una ruta accesible, por ejemplo `C:\proyectos\Prestamos`:
 ```powershell
 mkdir C:\proyectos
 cd C:\proyectos
-git clone <URL_DEL_REPOSITORIO> RobertApp
-cd RobertApp
+git clone <URL_DEL_REPOSITORIO> Prestamos
+cd Prestamos
 ```
 
 ### 3. Configurar el Backend
@@ -41,20 +41,20 @@ El backend gestiona la base de datos (SQLite), la API, la autenticación y la ge
 
 1. **Instalar dependencias:**
    ```powershell
-   cd C:\proyectos\RobertApp\backend
+   cd C:\proyectos\Prestamos\backend
    npm install
    ```
 
 2. **Variables de entorno:**
-   Crea un archivo `.env` en la ruta `C:\proyectos\RobertApp\backend\.env` y configura lo siguiente:
+   Crea un archivo `.env` en la ruta `C:\proyectos\Prestamos\backend\.env` y configura lo siguiente:
    ```env
    PORT=3001
    JWT_SECRET=tu_secreto_super_seguro_aqui
-   DB_PATH=./data/robertapp.db
+   DB_PATH=./data/prestamos.db
    ```
 
 3. **Inicializar la base de datos (Semilla):**
-   Para preparar la estructura SQLite y crear el usuario administrador por defecto (`robert` / `robert2026`):
+   Para preparar la estructura SQLite y crear el usuario administrador por defecto (`admin` / `Admin2026`):
    ```powershell
    npx tsx src/database/seed.ts
    ```
@@ -65,7 +65,7 @@ El frontend está desarrollado en React con Vite. Usaremos un build estático pa
 
 1. **Instalar dependencias:**
    ```powershell
-   cd C:\proyectos\RobertApp\frontend
+   cd C:\proyectos\Prestamos\frontend
    npm install
    ```
 
@@ -80,12 +80,12 @@ El frontend está desarrollado en React con Vite. Usaremos un build estático pa
 Debido a ciertas restricciones de rutas y permisos en Windows al ejecutar scripts (`.bat`/`.cmd`), configuraremos PM2 para que llame directamente al binario de Node.js `node.exe`.
 
 1. **Revisar `ecosystem.config.js`:**
-   En la raíz del proyecto (`C:\proyectos\RobertApp\ecosystem.config.js`) se encuentra el archivo de PM2 configurado para el entorno Windows.
+   En la raíz del proyecto (`C:\proyectos\Prestamos\ecosystem.config.js`) se encuentra el archivo de PM2 configurado para el entorno Windows.
 
 2. **Iniciar los servicios con PM2:**
    Vuelve a la raíz del proyecto y ejecuta:
    ```powershell
-   cd C:\proyectos\RobertApp
+   cd C:\proyectos\Prestamos
    pm2 start ecosystem.config.js
    ```
 
@@ -116,7 +116,7 @@ La configuración de proxy dentro de Vite (`preview`) enviará automáticamente 
 ### Mantenimiento y Comandos Útiles
 
 - **Ver el estado de la aplicación:** `pm2 status`
-- **Ver los logs de errores o actividad:** `pm2 logs` (o específicamente `pm2 logs robertapp-backend`)
+- **Ver los logs de errores o actividad:** `pm2 logs` (o específicamente `pm2 logs prestamos-backend`)
 - **Reiniciar servicios tras una actualización de código:** 
   ```powershell
   git pull
@@ -132,6 +132,6 @@ La configuración de proxy dentro de Vite (`preview`) enviará automáticamente 
   ```
 
 ---
-**Usuario de Acceso:** `robert`  
-**Contraseña por defecto:** `robert2026`  
+**Usuario de Acceso:** `admin`  
+**Contraseña por defecto:** `Admin2026`  
 *(Se recomienda cambiar la contraseña desde el panel de usuario al iniciar sesión por primera vez).*

@@ -12,7 +12,7 @@ function resolveJwtSecret(): string {
     throw new Error('JWT_SECRET is required when NODE_ENV=production')
   }
 
-  return 'robertapp-dev-secret'
+  return 'prestamos-dev-secret'
 }
 
 export const JWT_SECRET = resolveJwtSecret()

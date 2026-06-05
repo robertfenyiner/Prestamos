@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem('robertapp-token')
+    localStorage.getItem('prestamos-token')
   )
   const [loading, setLoading] = useState(true)
 
@@ -33,8 +33,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       authAPI.me()
         .then(res => setUser(res.data.user))
         .catch(() => {
-          localStorage.removeItem('robertapp-token')
-          localStorage.removeItem('robertapp-user')
+          localStorage.removeItem('prestamos-token')
+          localStorage.removeItem('prestamos-user')
           setToken(null)
         })
         .finally(() => setLoading(false))
@@ -46,8 +46,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const res = await authAPI.login(email, password)
     const { token: newToken, user: userData } = res.data
-    localStorage.setItem('robertapp-token', newToken)
-    localStorage.setItem('robertapp-user', JSON.stringify(userData))
+    localStorage.setItem('prestamos-token', newToken)
+    localStorage.setItem('prestamos-user', JSON.stringify(userData))
     setToken(newToken)
     setUser(userData)
   }
@@ -55,15 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     const res = await authAPI.register(name, email, password)
     const { token: newToken, user: userData } = res.data
-    localStorage.setItem('robertapp-token', newToken)
-    localStorage.setItem('robertapp-user', JSON.stringify(userData))
+    localStorage.setItem('prestamos-token', newToken)
+    localStorage.setItem('prestamos-user', JSON.stringify(userData))
     setToken(newToken)
     setUser(userData)
   }
 
   const logout = () => {
-    localStorage.removeItem('robertapp-token')
-    localStorage.removeItem('robertapp-user')
+    localStorage.removeItem('prestamos-token')
+    localStorage.removeItem('prestamos-user')
     setToken(null)
     setUser(null)
   }

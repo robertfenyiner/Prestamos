@@ -262,7 +262,7 @@ export default function SettingsPage() {
             <div>Sesión: <strong>{whatsAppSession}</strong></div>
             <div>Destino: <strong>{whatsAppTo}</strong></div>
           </div>
-          <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>Cuando WhatsApp está apagado, RobertApp no consulta ni envía mensajes por Whatsper.</p>
+          <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--color-text-muted)' }}>Cuando WhatsApp está apagado, Prestamos no consulta ni envía mensajes por Whatsper.</p>
           <button className="btn" onClick={() => refreshWhatsAppStatus(true)} disabled={checkingWhatsApp || !whatsAppEnabled}>{checkingWhatsApp ? 'Consultando...' : 'Verificar Estado'}</button>
           <button className="btn btn-primary" onClick={handleTestWhatsApp} disabled={testingWhatsApp || !whatsAppConfigured || !whatsAppEnabled}>{testingWhatsApp ? 'Enviando...' : 'Enviar WhatsApp de Prueba'}</button>
           <button className="btn" onClick={handleSendWhatsAppReport} disabled={sendingWhatsAppReport || !whatsAppConfigured || !whatsAppEnabled}>{sendingWhatsAppReport ? 'Enviando...' : 'Enviar Reporte Financiero'}</button>

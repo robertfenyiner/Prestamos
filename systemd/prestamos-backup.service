@@ -1,0 +1,13 @@
+[Unit]
+Description=Prestamos SQLite backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=APP_DIR=/opt/Prestamos
+Environment=BACKUP_DIR=/opt/backups/prestamos
+Environment=RETENTION_DAYS=30
+ExecStart=/opt/Prestamos/scripts/backup-sqlite.sh
+User=robert
+Group=robert

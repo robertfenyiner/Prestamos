@@ -95,10 +95,10 @@ export async function sendDailySavingsReport(chatId: string, boxes: any[], total
 
 export async function sendTestTelegramMessage(chatId: string) {
   const message =
-    `✅ <b>RobertApp — Conexión exitosa</b>\n\n` +
+    `✅ <b>Prestamos — Conexión exitosa</b>\n\n` +
     `Tu bot de Telegram está correctamente configurado.\n` +
     `Recibirás un resumen diario de las ganancias de tus cajitas de ahorro.\n\n` +
-    `🤖 <i>Mensaje enviado desde RobertApp</i>`
+    `🤖 <i>Mensaje enviado desde Prestamos</i>`
 
   return sendTelegramMessage(chatId, message)
 }
@@ -109,7 +109,7 @@ export async function sendTelegramFinanceReport(chatId: string, report: Telegram
     : 'Sin datos'
 
   const message =
-    `📊 <b>RobertApp — Reporte financiero</b>\n\n` +
+    `📊 <b>Prestamos — Reporte financiero</b>\n\n` +
     `👤 <b>Usuario:</b> ${escapeHtml(report.userName)}\n` +
     `🕒 <b>Generado:</b> ${escapeHtml(report.generatedAt)}\n\n` +
     `💸 <b>Gastos de hoy:</b> ${formatCOP(report.todayExpensesCOP)}\n` +

@@ -64,7 +64,7 @@ export default function LoginPage() {
             boxShadow: '0 0 30px rgba(99, 102, 241, 0.4), 0 0 60px rgba(99, 102, 241, 0.15)',
             animation: 'pulse-glow 3s ease-in-out infinite',
           }}>
-            <img src="/logo.jpg" alt="RobertApp" style={{
+            <img src="/logo.jpg" alt="Prestamos" style={{
               width: '100%', height: '100%',
               borderRadius: '50%',
               objectFit: 'cover',
@@ -73,7 +73,7 @@ export default function LoginPage() {
             }} />
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 4, letterSpacing: '-0.02em' }}>
-            RobertApp
+            Prestamos
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
             Inicia sesión para acceder a tus finanzas

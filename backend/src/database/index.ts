@@ -2,7 +2,7 @@ import Database from 'better-sqlite3'
 import path from 'path'
 import fs from 'fs'
 
-const DB_PATH = process.env.DB_PATH || './data/robertapp.db'
+const DB_PATH = process.env.DB_PATH || './data/prestamos.db'
 
 const dataDir = path.dirname(DB_PATH)
 if (!fs.existsSync(dataDir)) {
@@ -61,6 +61,73 @@ export function initDatabase() {
       description TEXT,
       color TEXT DEFAULT '#10b981',
       user_id INTEGER NOT NULL REFERENCES users(id),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS clients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      document TEXT,
+      phone TEXT,
+      alternate_phone TEXT,
+      address TEXT,
+      reference_name TEXT,
+      reference_phone TEXT,
+      notes TEXT,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS loans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE RESTRICT,
+      currency_id INTEGER NOT NULL DEFAULT 1 REFERENCES currencies(id),
+      principal_amount REAL NOT NULL,
+      interest_rate REAL NOT NULL DEFAULT 0,
+      interest_type TEXT DEFAULT 'flat' CHECK(interest_type IN ('flat')),
+      interest_amount REAL NOT NULL DEFAULT 0,
+      total_amount REAL NOT NULL,
+      installments_count INTEGER NOT NULL DEFAULT 1,
+      frequency TEXT NOT NULL DEFAULT 'monthly' CHECK(frequency IN ('daily', 'weekly', 'biweekly', 'monthly')),
+      start_date DATE NOT NULL DEFAULT (date('now')),
+      first_due_date DATE NOT NULL,
+      late_fee_rate REAL NOT NULL DEFAULT 0,
+      status TEXT DEFAULT 'active' CHECK(status IN ('active', 'paid', 'cancelled')),
+      notes TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS loan_installments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      loan_id INTEGER NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+      installment_number INTEGER NOT NULL,
+      due_date DATE NOT NULL,
+      principal_amount REAL NOT NULL,
+      interest_amount REAL NOT NULL DEFAULT 0,
+      late_fee_amount REAL NOT NULL DEFAULT 0,
+      total_amount REAL NOT NULL,
+      paid_amount REAL NOT NULL DEFAULT 0,
+      paid_at DATETIME,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'partial', 'paid', 'cancelled')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(loan_id, installment_number)
+    );
+
+    CREATE TABLE IF NOT EXISTS loan_payments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      loan_id INTEGER NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+      installment_id INTEGER REFERENCES loan_installments(id) ON DELETE SET NULL,
+      amount REAL NOT NULL,
+      payment_date DATE NOT NULL DEFAULT (date('now')),
+      method TEXT DEFAULT 'cash',
+      notes TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -221,6 +288,15 @@ export function initDatabase() {
     );
 
     CREATE INDEX IF NOT EXISTS idx_expenses_user ON expenses(user_id);
+    CREATE INDEX IF NOT EXISTS idx_clients_user ON clients(user_id);
+    CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status);
+    CREATE INDEX IF NOT EXISTS idx_clients_name ON clients(name);
+    CREATE INDEX IF NOT EXISTS idx_loans_user ON loans(user_id);
+    CREATE INDEX IF NOT EXISTS idx_loans_client ON loans(client_id);
+    CREATE INDEX IF NOT EXISTS idx_loans_status ON loans(status);
+    CREATE INDEX IF NOT EXISTS idx_loan_installments_loan ON loan_installments(loan_id);
+    CREATE INDEX IF NOT EXISTS idx_loan_installments_due ON loan_installments(due_date);
+    CREATE INDEX IF NOT EXISTS idx_loan_payments_loan ON loan_payments(loan_id);
     CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
     CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category_id);
     CREATE INDEX IF NOT EXISTS idx_expenses_currency ON expenses(currency_id);

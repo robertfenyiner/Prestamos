@@ -14,6 +14,8 @@ import currenciesRoutes from './modules/currencies/routes'
 import filesRoutes from './modules/files/routes'
 import notificationsRoutes, { startNotificationScheduler } from './modules/notifications/routes'
 import creditCardsRoutes from './modules/credit-cards/routes'
+import clientesRoutes from './modules/clientes/routes'
+import prestamosRoutes from './modules/prestamos/routes'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3001
@@ -51,7 +53,7 @@ app.use('/api/auth/register', authLimiter)
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'OK',
-    app: 'RobertApp API',
+    app: 'Prestamos API',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
   })
@@ -65,6 +67,8 @@ app.use('/api/currencies', currenciesRoutes)
 app.use('/api/files', filesRoutes)
 app.use('/api/notifications', notificationsRoutes)
 app.use('/api/credit-cards', creditCardsRoutes)
+app.use('/api/clientes', clientesRoutes)
+app.use('/api/prestamos', prestamosRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
@@ -75,7 +79,7 @@ updateExchangeRates().catch(err => console.error('Initial rate update failed:', 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('')
   console.log('  ╔══════════════════════════════════════════╗')
-  console.log('  ║         🚀 RobertApp API Server          ║')
+  console.log('  ║         🚀 Prestamos API Server          ║')
   console.log('  ╠══════════════════════════════════════════╣')
   console.log(`  ║  Local:     http://localhost:${PORT}         ║`)
   console.log(`  ║  Network:   http://0.0.0.0:${PORT}           ║`)

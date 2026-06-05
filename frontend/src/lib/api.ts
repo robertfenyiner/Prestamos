@@ -7,7 +7,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('robertapp-token')
+  const token = localStorage.getItem('prestamos-token')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -18,8 +18,8 @@ api.interceptors.response.use(
   res => res,
   error => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('robertapp-token')
-      localStorage.removeItem('robertapp-user')
+      localStorage.removeItem('prestamos-token')
+      localStorage.removeItem('prestamos-user')
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }
@@ -77,6 +77,47 @@ export const gastosAPI = {
   deleteCompany: (id: number) => api.delete(`/gastos/companies/${id}`),
 }
 
+export interface ClientPayload {
+  name: string
+  document?: string
+  phone?: string
+  alternate_phone?: string
+  address?: string
+  reference_name?: string
+  reference_phone?: string
+  notes?: string
+  status?: 'active' | 'inactive'
+}
+
+export const clientesAPI = {
+  list: (params?: { search?: string; status?: 'all' | 'active' | 'inactive'; limit?: number; offset?: number }) => api.get('/clientes', { params }),
+  detail: (id: number) => api.get(`/clientes/${id}`),
+  create: (data: ClientPayload) => api.post('/clientes', data),
+  update: (id: number, data: Partial<ClientPayload>) => api.put(`/clientes/${id}`, data),
+  deactivate: (id: number) => api.delete(`/clientes/${id}`),
+}
+
+export interface LoanPayload {
+  client_id: number
+  currency_id?: number
+  principal_amount: number
+  interest_rate?: number
+  installments_count: number
+  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly'
+  start_date?: string
+  first_due_date?: string
+  late_fee_rate?: number
+  notes?: string
+}
+
+export const prestamosAPI = {
+  list: (params?: { search?: string; status?: 'all' | 'active' | 'paid' | 'cancelled'; limit?: number; offset?: number }) => api.get('/prestamos', { params }),
+  detail: (id: number) => api.get(`/prestamos/${id}`),
+  create: (data: LoanPayload) => api.post('/prestamos', data),
+  pay: (id: number, data: { installment_id?: number; amount: number; payment_date?: string; method?: string; notes?: string }) => api.post(`/prestamos/${id}/payments`, data),
+  cancel: (id: number) => api.delete(`/prestamos/${id}`),
+}
+
 export const filesAPI = {
   upload: (expenseId: number, files: File[]) => {
     const formData = new FormData()
@@ -85,7 +126,7 @@ export const filesAPI = {
   },
   list: (expenseId: number) => api.get(`/files/expense/${expenseId}`),
   downloadUrl: (fileId: number) => {
-    const token = localStorage.getItem('robertapp-token') || ''
+    const token = localStorage.getItem('prestamos-token') || ''
     return `/api/files/download/${fileId}?token=${encodeURIComponent(token)}`
   },
   delete: (fileId: number) => api.delete(`/files/${fileId}`),

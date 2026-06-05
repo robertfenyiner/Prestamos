@@ -112,7 +112,7 @@ function buildMessage(userName: string, days: number, installments: UpcomingInst
     }).join('\n')
     : 'Sin cortes o fechas de pago próximas.'
 
-  return `💳 <b>RobertApp — Alertas de tarjetas</b>\n\n` +
+  return `💳 <b>Prestamos — Alertas de tarjetas</b>\n\n` +
     `👤 <b>Usuario:</b> ${escapeHtml(userName)}\n` +
     `⏰ <b>Rango:</b> próximos ${days} día(s)\n\n` +
     `<b>Cuotas próximas:</b>\n${installmentLines}\n\n` +

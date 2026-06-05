@@ -1,7 +1,7 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, Receipt, PiggyBank, Settings,
-  ChevronLeft, ChevronRight, LogOut, BarChart3, Bell, CreditCard,
+  LayoutDashboard, Settings,
+  ChevronLeft, ChevronRight, LogOut, Landmark, UserRound,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -14,14 +14,11 @@ interface SidebarProps {
 
 const navItems = [
   { section: 'General', items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }] },
-  { section: 'Módulos', items: [
-    { to: '/gastos', label: 'Gastos', icon: Receipt },
-    { to: '/reportes', label: 'Reportes', icon: BarChart3 },
-    { to: '/ahorros', label: 'Ahorros', icon: PiggyBank },
-    { to: '/tarjetas', label: 'Tarjetas', icon: CreditCard },
+  { section: 'Operación', items: [
+    { to: '/prestamos', label: 'Préstamos', icon: Landmark },
+    { to: '/clientes', label: 'Clientes', icon: UserRound },
   ]},
   { section: 'Sistema', items: [
-    { to: '/notificaciones', label: 'Notificaciones', icon: Bell },
     { to: '/settings', label: 'Configuración', icon: Settings },
   ]},
 ]
@@ -40,8 +37,8 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <img src="/logo.jpg" alt="RobertApp" style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
-          {!collapsed && <span>RobertApp</span>}
+          <img src="/logo.jpg" alt="Prestamos" style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
+          {!collapsed && <span>Prestamos</span>}
         </div>
         <button className="btn-ghost" onClick={onToggle}
           style={{ padding: 6, borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center' }}

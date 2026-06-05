@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   TrendingUp, TrendingDown, Wallet, PiggyBank, Receipt,
   ArrowUpRight, ArrowDownRight, CreditCard, Target, Loader2,
+  CircleDollarSign, AlertTriangle, UserRound,
 } from 'lucide-react'
-import { dashboardAPI } from '@/lib/api'
+import { dashboardAPI, prestamosAPI } from '@/lib/api'
 
 interface DashboardData {
   balance: number
@@ -24,11 +25,19 @@ function formatCOP(value: number) {
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
+  const [loanSummary, setLoanSummary] = useState<any>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    dashboardAPI.summary()
-      .then(res => setData(res.data))
+    Promise.all([
+      dashboardAPI.summary(),
+      prestamosAPI.list({ status: 'all', limit: 200 }),
+    ])
+      .then(([dashboardRes, loansRes]) => {
+        setData(dashboardRes.data)
+        const prestamosVencidos = (loansRes.data.loans || []).filter((loan: any) => loan.status === 'active' && Number(loan.overdue_count || 0) > 0).length
+        setLoanSummary({ ...(loansRes.data.summary || {}), prestamos_vencidos: prestamosVencidos })
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
@@ -46,25 +55,32 @@ export default function DashboardPage() {
 
   const stats = [
     {
-      label: 'Balance General',
-      value: formatCOP(data.balance),
-      change: `${data.expenseChange > 0 ? '+' : ''}${data.expenseChange}%`,
-      positive: data.expenseChange <= 0,
-      icon: Wallet, color: 'var(--color-accent)', bg: 'var(--color-accent-soft)',
-    },
-    {
-      label: 'Ahorros Totales',
-      value: formatCOP(data.totalSavings),
-      change: `${data.savingsBoxes.length} cajitas`,
+      label: 'Capital Activo',
+      value: formatCOP(loanSummary.active_principal || 0),
+      change: `${loanSummary.active || 0} préstamo(s) activo(s)`,
       positive: true,
-      icon: PiggyBank, color: 'var(--color-success)', bg: 'var(--color-success-soft)',
+      icon: CircleDollarSign, color: 'var(--color-accent)', bg: 'var(--color-accent-soft)',
     },
     {
-      label: 'Gastos del Mes',
-      value: formatCOP(data.expensesThisMonth),
-      change: `${data.expenseCount} transacciones`,
-      positive: false,
-      icon: Receipt, color: 'var(--color-danger)', bg: 'var(--color-danger-soft)',
+      label: 'Total a Cobrar',
+      value: formatCOP(loanSummary.active_total || 0),
+      change: 'Capital + interés pendiente',
+      positive: true,
+      icon: Wallet, color: 'var(--color-success)', bg: 'var(--color-success-soft)',
+    },
+    {
+      label: 'Préstamos Vencidos',
+      value: String(loanSummary.prestamos_vencidos || 0),
+      change: 'Con al menos una cuota vencida',
+      positive: Number(loanSummary.prestamos_vencidos || 0) === 0,
+      icon: UserRound, color: 'var(--color-warning)', bg: 'var(--color-warning-soft)',
+    },
+    {
+      label: 'Cuotas Vencidas',
+      value: String(loanSummary.overdue_installments || 0),
+      change: 'Pendientes fuera de fecha',
+      positive: Number(loanSummary.overdue_installments || 0) === 0,
+      icon: AlertTriangle, color: 'var(--color-danger)', bg: 'var(--color-danger-soft)',
     },
   ]
 
@@ -73,7 +89,7 @@ export default function DashboardPage() {
       <div className="page-header">
         <h1 className="page-title">Dashboard</h1>
         <p className="page-subtitle">
-          Resumen financiero general — {new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+          Resumen principal de préstamos — {new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
         </p>
       </div>
 
