@@ -73,7 +73,7 @@ export default function LoginPage() {
             }} />
           </div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 4, letterSpacing: '-0.02em' }}>
-            Prestamos
+            Prestamos Garcia
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
             Inicia sesión para acceder a tus finanzas
