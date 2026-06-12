@@ -116,6 +116,10 @@ export const prestamosAPI = {
   create: (data: LoanPayload) => api.post('/prestamos', data),
   pay: (id: number, data: { installment_id?: number; amount: number; payment_date?: string; method?: string; notes?: string }) => api.post(`/prestamos/${id}/payments`, data),
   cancel: (id: number) => api.delete(`/prestamos/${id}`),
+  edit: (id: number, data: Partial<LoanPayload>) => api.put(`/prestamos/${id}`, data),
+  renew: (id: number) => api.post(`/prestamos/${id}/renew`),
+  deleteHard: (id: number) => api.delete(`/prestamos/${id}/hard`),
+  payTotal: (id: number, data?: { payment_date?: string; method?: string; notes?: string }) => api.post(`/prestamos/${id}/pay-total`, data || {}),
 }
 
 export const filesAPI = {

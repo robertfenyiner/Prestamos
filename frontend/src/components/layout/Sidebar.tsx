@@ -37,11 +37,10 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''} ${mobileOpen ? 'mobile-open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <img src="/logo.jpg" alt="Prestamos" style={{ width: 36, height: 36, borderRadius: 'var(--radius-sm)', objectFit: 'cover' }} />
-          {!collapsed && <span>Prestamos</span>}
+          <img src="/logo-garcia.jpg?v=2" alt="Garcia" className="sidebar-logo-img" />
+          {!collapsed && <span>GARCIA</span>}
         </div>
-        <button className="btn-ghost" onClick={onToggle}
-          style={{ padding: 6, borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'none', border: 'none', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center' }}
+        <button className="sidebar-toggle" onClick={onToggle}
           aria-label={collapsed ? 'Expandir' : 'Colapsar'}>
           {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
@@ -70,29 +69,17 @@ export default function Sidebar({ collapsed, mobileOpen, onToggle, onMobileClose
 
       <div className="sidebar-footer">
         {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--color-accent), #a78bfa)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '0.8rem', fontWeight: 600, color: 'white', flexShrink: 0,
-              }}>
-                {user?.name?.charAt(0) || 'U'}
+          <div className="sidebar-user">
+            <div className="sidebar-user-info">
+              <div className="sidebar-avatar">
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
               </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.825rem', fontWeight: 600, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>
-                  {user?.name || 'Usuario'}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>
-                  {user?.role === 'admin' ? 'Administrador' : 'Usuario'}
-                </div>
+              <div className="sidebar-user-meta">
+                <div className="sidebar-user-name">{user?.name || 'Usuario'}</div>
+                <div className="sidebar-user-role">{user?.role === 'admin' ? 'Administrador' : 'Usuario'}</div>
               </div>
             </div>
-            <button onClick={handleLogout} title="Cerrar sesión"
-              style={{ padding: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', borderRadius: 'var(--radius-sm)', transition: 'color var(--transition-fast)' }}
-              onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-danger)')}
-              onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-text-muted)')}>
+            <button onClick={handleLogout} title="Cerrar sesión" className="sidebar-logout">
               <LogOut size={16} />
             </button>
           </div>

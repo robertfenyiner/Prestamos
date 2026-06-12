@@ -78,6 +78,47 @@ function recalcLoanStatus(loanId: number | string, userId: number) {
   }
 }
 
+// Calcula y persiste la mora para todas las cuotas vencidas de un préstamo
+// Mora = (tasa% / 100) * valor_cuota * días_retraso
+function applyLateFees(loanId: number | string, userId: number) {
+  const loan = getLoan(loanId, userId)
+  if (!loan) return
+
+  const lateRate = Number(loan.late_fee_rate || 0)
+  if (lateRate <= 0) return // Si no hay tasa, no calcular
+
+  // Obtener cuotas vencidas pendientes
+  const overdue = db.prepare(`
+    SELECT id, total_amount, paid_amount, due_date, late_fee_amount
+    FROM loan_installments
+    WHERE loan_id = ? AND user_id = ?
+      AND status NOT IN ('paid', 'cancelled')
+      AND date(due_date) < date('now')
+  `).all(loanId, userId) as Array<{ id: number; total_amount: number; paid_amount: number; due_date: string; late_fee_amount: number }>
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  for (const inst of overdue) {
+    const due = new Date(`${inst.due_date}T00:00:00`)
+    const daysLate = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24))
+    if (daysLate <= 0) continue
+
+    // Mora = (% / 100) * valor_base_cuota * días_retraso
+    // Usamos el valor SIN mora (total - mora ya aplicada) para evitar composición exponencial
+    const baseAmount = money(Number(inst.total_amount) - Number(inst.late_fee_amount || 0))
+    const pendingBase = money(baseAmount - Number(inst.paid_amount || 0))
+    const newLateFee = money(pendingBase * (lateRate / 100) * daysLate)
+    const newTotal = money(baseAmount + newLateFee)
+
+    db.prepare(`
+      UPDATE loan_installments
+      SET late_fee_amount = ?, total_amount = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND loan_id = ? AND user_id = ?
+    `).run(newLateFee, newTotal, inst.id, loanId, userId)
+  }
+}
+
 router.get('/', (req: AuthRequest, res: Response) => {
   const userId = req.user!.id
   const { status = 'all', search, limit = '100', offset = '0' } = req.query
@@ -109,7 +150,15 @@ router.get('/', (req: AuthRequest, res: Response) => {
   query += ' GROUP BY l.id ORDER BY l.created_at DESC LIMIT ? OFFSET ?'
   params.push(Number(limit), Number(offset))
 
-  const loans = db.prepare(query).all(...params)
+  const loans = db.prepare(query).all(...params) as Array<{ id: number }>
+
+  // Calcular mora en tiempo real para todos los préstamos activos
+  for (const l of loans) {
+    applyLateFees(l.id, userId)
+  }
+
+  // Re-consultar para reflejar las moras actualizadas
+  const loansWithFees = db.prepare(query).all(...params)
   const summary = db.prepare(`
     SELECT
       COUNT(*) as total,
@@ -127,7 +176,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
     WHERE user_id = ? AND status NOT IN ('paid', 'cancelled') AND date(due_date) < date('now')
   `).get(userId)
 
-  res.json({ loans, summary: { ...(summary as object), ...(overdue as object) } })
+  res.json({ loans: loansWithFees, summary: { ...(summary as object), ...(overdue as object) } })
 })
 
 router.get('/:id', (req: AuthRequest, res: Response) => {
@@ -138,13 +187,15 @@ router.get('/:id', (req: AuthRequest, res: Response) => {
     res.status(404).json({ error: 'Préstamo no encontrado' })
     return
   }
+  // Calcular mora en tiempo real para todas las cuotas vencidas
+  applyLateFees(id, userId)
   const installments = db.prepare(`
     SELECT * FROM loan_installments WHERE loan_id = ? AND user_id = ? ORDER BY installment_number ASC
   `).all(id, userId)
   const payments = db.prepare(`
     SELECT * FROM loan_payments WHERE loan_id = ? AND user_id = ? ORDER BY payment_date DESC, id DESC
   `).all(id, userId)
-  res.json({ loan, installments, payments })
+  res.json({ loan: getLoan(id, userId), installments, payments })
 })
 
 router.post('/', (req: AuthRequest, res: Response) => {
@@ -242,6 +293,8 @@ router.post('/:id/payments', (req: AuthRequest, res: Response) => {
     res.status(404).json({ error: 'Préstamo no encontrado' })
     return
   }
+  // Aplicar mora antes de registrar el pago
+  applyLateFees(id, userId)
 
   const { installment_id, amount, payment_date = new Date().toISOString().slice(0, 10), method = 'cash', notes } = req.body
   const payAmount = Number(amount)
@@ -293,6 +346,81 @@ router.post('/:id/payments', (req: AuthRequest, res: Response) => {
   }
 })
 
+// POST /prestamos/:id/pay-total — Liquidar préstamo de una sola vez
+router.post('/:id/pay-total', (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id
+  const id = String(req.params.id)
+  const loan = getLoan(id, userId)
+  if (!loan) {
+    res.status(404).json({ error: 'Préstamo no encontrado' })
+    return
+  }
+  if (loan.status !== 'active') {
+    res.status(400).json({ error: 'Solo se pueden liquidar préstamos activos' })
+    return
+  }
+
+  const { payment_date = new Date().toISOString().slice(0, 10), method = 'cash', notes } = req.body
+
+  // Calcular saldo pendiente
+  const pending = db.prepare(`
+    SELECT id, installment_number, total_amount, paid_amount
+    FROM loan_installments
+    WHERE loan_id = ? AND user_id = ? AND status NOT IN ('paid', 'cancelled')
+    ORDER BY installment_number ASC
+  `).all(id, userId) as Array<{ id: number; installment_number: number; total_amount: number; paid_amount: number }>
+
+  if (pending.length === 0) {
+    res.status(400).json({ error: 'El préstamo no tiene cuotas pendientes' })
+    return
+  }
+
+  let totalPaid = 0
+  for (const inst of pending) {
+    totalPaid = money(totalPaid + (Number(inst.total_amount) - Number(inst.paid_amount || 0)))
+  }
+
+  const trx = db.transaction(() => {
+    // Marcar cada cuota pendiente como pagada y crear un pago por cada una
+    for (const inst of pending) {
+      const remaining = money(Number(inst.total_amount) - Number(inst.paid_amount || 0))
+      db.prepare(`
+        UPDATE loan_installments
+        SET paid_amount = total_amount, status = 'paid', paid_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND loan_id = ? AND user_id = ?
+      `).run(inst.id, id, userId)
+
+      // Registrar el pago (sin installment_id porque es pago global, lo asociamos a la primera cuota)
+      db.prepare(`
+        INSERT INTO loan_payments (user_id, loan_id, installment_id, amount, payment_date, method, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(userId, id, inst.id, remaining, payment_date, cleanText(method) || 'cash',
+        cleanText(notes) || `Liquidación total del préstamo #${id}`)
+    }
+
+    // Cambiar status del préstamo a paid
+    db.prepare(`
+      UPDATE loans SET status = 'paid', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?
+    `).run(id, userId)
+  })
+
+  try {
+    trx()
+    res.json({
+      message: `Préstamo liquidado por ${fmtBackend(totalPaid)}`,
+      total_paid: totalPaid,
+      loan: getLoan(id, userId),
+      installments: db.prepare('SELECT * FROM loan_installments WHERE loan_id = ? AND user_id = ? ORDER BY installment_number ASC').all(id, userId)
+    })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+function fmtBackend(n: number) {
+  return Math.round((n + Number.EPSILON) * 100) / 100
+}
+
 router.delete('/:id', (req: AuthRequest, res: Response) => {
   const userId = req.user!.id
   const id = String(req.params.id)
@@ -304,6 +432,201 @@ router.delete('/:id', (req: AuthRequest, res: Response) => {
   db.prepare(`UPDATE loans SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`).run(id, userId)
   db.prepare(`UPDATE loan_installments SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE loan_id = ? AND user_id = ? AND status NOT IN ('paid', 'cancelled')`).run(id, userId)
   res.json({ message: 'Préstamo cancelado', loan: getLoan(id, userId) })
+})
+
+// PUT /prestamos/:id — Editar préstamo (solo si NO tiene pagos)
+router.put('/:id', (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id
+  const id = String(req.params.id)
+  const loan = getLoan(id, userId)
+  if (!loan) {
+    res.status(404).json({ error: 'Préstamo no encontrado' })
+    return
+  }
+  if (loan.status !== 'active') {
+    res.status(400).json({ error: 'Solo se pueden editar préstamos activos' })
+    return
+  }
+
+  // Verificar que NO tenga pagos
+  const paymentsCount = db.prepare(`
+    SELECT COUNT(*) as count FROM loan_payments WHERE loan_id = ? AND user_id = ?
+  `).get(id, userId) as { count: number }
+  if (paymentsCount.count > 0) {
+    res.status(400).json({ error: 'No se puede editar: el préstamo ya tiene pagos registrados. Cancélalo y crea uno nuevo.' })
+    return
+  }
+
+  const {
+    principal_amount,
+    interest_rate,
+    installments_count,
+    frequency,
+    first_due_date,
+    late_fee_rate,
+    notes,
+  } = req.body
+
+  const principal = Number(principal_amount ?? loan.principal_amount)
+  const rate = Number(interest_rate ?? loan.interest_rate)
+  const count = Number(installments_count ?? loan.installments_count)
+  const lateRate = Number(late_fee_rate ?? loan.late_fee_rate)
+  const freq = String(frequency ?? loan.frequency) as Frequency
+  const firstDue = cleanText(first_due_date) || String(loan.first_due_date)
+
+  if (!Number.isFinite(principal) || principal <= 0) {
+    res.status(400).json({ error: 'Valor prestado inválido' })
+    return
+  }
+  if (!Number.isInteger(count) || count <= 0 || count > 240) {
+    res.status(400).json({ error: 'Número de cuotas inválido' })
+    return
+  }
+  if (!['daily', 'weekly', 'biweekly', 'monthly'].includes(freq)) {
+    res.status(400).json({ error: 'Frecuencia no válida' })
+    return
+  }
+
+  const interest = money(principal * (rate / 100))
+  const total = money(principal + interest)
+  const principalBase = money(principal / count)
+  const interestBase = money(interest / count)
+  const totalBase = money(total / count)
+
+  const trx = db.transaction(() => {
+    // Actualizar préstamo
+    db.prepare(`
+      UPDATE loans SET
+        principal_amount = ?, interest_rate = ?, interest_amount = ?, total_amount = ?,
+        installments_count = ?, frequency = ?, first_due_date = ?, late_fee_rate = ?,
+        notes = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND user_id = ?
+    `).run(principal, rate, interest, total, count, freq, firstDue, lateRate, cleanText(notes), id, userId)
+
+    // Regenerar cuotas (borrar las anteriores que no estén pagadas, pero como validamos arriba, ninguna está pagada)
+    db.prepare('DELETE FROM loan_installments WHERE loan_id = ? AND user_id = ?').run(id, userId)
+
+    let principalAccum = 0
+    let interestAccum = 0
+    let totalAccum = 0
+    for (let i = 1; i <= count; i++) {
+      const last = i === count
+      const p = last ? money(principal - principalAccum) : principalBase
+      const it = last ? money(interest - interestAccum) : interestBase
+      const tt = last ? money(total - totalAccum) : totalBase
+      principalAccum = money(principalAccum + p)
+      interestAccum = money(interestAccum + it)
+      totalAccum = money(totalAccum + tt)
+      db.prepare(`
+        INSERT INTO loan_installments (user_id, loan_id, installment_number, due_date, principal_amount, interest_amount, total_amount)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(userId, id, i, dueDate(String(firstDue), freq, i - 1), p, it, tt)
+    }
+  })
+
+  try {
+    trx()
+    res.json({
+      loan: getLoan(id, userId),
+      installments: db.prepare('SELECT * FROM loan_installments WHERE loan_id = ? AND user_id = ? ORDER BY installment_number ASC').all(id, userId)
+    })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// POST /prestamos/:id/renew — Renovar préstamo (solo si está paid o cancelled)
+router.post('/:id/renew', (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id
+  const id = String(req.params.id)
+  const oldLoan = getLoan(id, userId)
+  if (!oldLoan) {
+    res.status(404).json({ error: 'Préstamo no encontrado' })
+    return
+  }
+  if (oldLoan.status === 'active') {
+    res.status(400).json({ error: 'No se puede renovar un préstamo activo' })
+    return
+  }
+
+  // Crear nuevo préstamo con los mismos datos
+  const today = new Date().toISOString().slice(0, 10)
+  const interest = Number(oldLoan.interest_amount)
+  const total = Number(oldLoan.total_amount)
+  const count = Number(oldLoan.installments_count)
+  const principalBase = money(Number(oldLoan.principal_amount) / count)
+  const interestBase = money(interest / count)
+  const totalBase = money(total / count)
+
+  const trx = db.transaction(() => {
+    const result = db.prepare(`
+      INSERT INTO loans (
+        user_id, client_id, currency_id, principal_amount, interest_rate,
+        interest_amount, total_amount, installments_count, frequency,
+        start_date, first_due_date, late_fee_rate, notes, renewed_from_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId, oldLoan.client_id, oldLoan.currency_id,
+      oldLoan.principal_amount, oldLoan.interest_rate,
+      oldLoan.interest_amount, oldLoan.total_amount,
+      oldLoan.installments_count, oldLoan.frequency,
+      today, today, oldLoan.late_fee_rate, oldLoan.notes, oldLoan.id
+    )
+
+    const newLoanId = Number(result.lastInsertRowid)
+    let principalAccum = 0
+    let interestAccum = 0
+    let totalAccum = 0
+    const freq = oldLoan.frequency as Frequency
+    for (let i = 1; i <= count; i++) {
+      const last = i === count
+      const p = last ? money(Number(oldLoan.principal_amount) - principalAccum) : principalBase
+      const it = last ? money(interest - interestAccum) : interestBase
+      const tt = last ? money(total - totalAccum) : totalBase
+      principalAccum = money(principalAccum + p)
+      interestAccum = money(interestAccum + it)
+      totalAccum = money(totalAccum + tt)
+      db.prepare(`
+        INSERT INTO loan_installments (user_id, loan_id, installment_number, due_date, principal_amount, interest_amount, total_amount)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(userId, newLoanId, i, dueDate(today, freq, i - 1), p, it, tt)
+    }
+    return newLoanId
+  })
+
+  try {
+    const newLoanId = trx()
+    res.status(201).json({
+      loan: getLoan(newLoanId, userId),
+      installments: db.prepare('SELECT * FROM loan_installments WHERE loan_id = ? ORDER BY installment_number ASC').all(newLoanId),
+      message: `Préstamo renovado con éxito (nuevo #${newLoanId})`
+    })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// DELETE /prestamos/:id/hard — Eliminar préstamo DEFINITIVAMENTE (con confirmación)
+router.delete('/:id/hard', (req: AuthRequest, res: Response) => {
+  const userId = req.user!.id
+  const id = String(req.params.id)
+  const loan = getLoan(id, userId)
+  if (!loan) {
+    res.status(404).json({ error: 'Préstamo no encontrado' })
+    return
+  }
+  // Borrar pagos, cuotas y préstamo (en transacción)
+  const trx = db.transaction(() => {
+    db.prepare('DELETE FROM loan_payments WHERE loan_id = ? AND user_id = ?').run(id, userId)
+    db.prepare('DELETE FROM loan_installments WHERE loan_id = ? AND user_id = ?').run(id, userId)
+    db.prepare('DELETE FROM loans WHERE id = ? AND user_id = ?').run(id, userId)
+  })
+  try {
+    trx()
+    res.json({ message: 'Préstamo eliminado permanentemente' })
+  } catch (err: any) {
+    res.status(400).json({ error: err.message })
+  }
 })
 
 export default router

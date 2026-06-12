@@ -97,6 +97,7 @@ export function initDatabase() {
       late_fee_rate REAL NOT NULL DEFAULT 0,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'paid', 'cancelled')),
       notes TEXT,
+      renewed_from_id INTEGER REFERENCES loans(id) ON DELETE SET NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -318,6 +319,7 @@ export function initDatabase() {
   ensureColumn('expenses', 'credit_card_id', 'INTEGER REFERENCES credit_cards(id)')
   ensureColumn('credit_card_installments', 'paid_amount', 'REAL DEFAULT 0')
   ensureColumn('credit_card_installments', 'paid_at', 'DATETIME')
+  ensureColumn('loans', 'renewed_from_id', 'INTEGER REFERENCES loans(id) ON DELETE SET NULL')
 
   console.log('✅ Database initialized')
 }

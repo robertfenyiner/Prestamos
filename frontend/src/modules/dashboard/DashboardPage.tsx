@@ -1,46 +1,83 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
-  TrendingUp, TrendingDown, Wallet, PiggyBank, Receipt,
-  ArrowUpRight, ArrowDownRight, CreditCard, Target, Loader2,
-  CircleDollarSign, AlertTriangle, UserRound,
+  AlertTriangle,
+  CalendarDays,
+  CircleDollarSign,
+  Clock,
+  Loader2,
+  Plus,
+  TrendingDown,
+  TrendingUp,
+  UserRound,
+  Users,
+  Wallet,
 } from 'lucide-react'
-import { dashboardAPI, prestamosAPI } from '@/lib/api'
+import { clientesAPI, prestamosAPI } from '@/lib/api'
 
-interface DashboardData {
-  balance: number
-  totalSavings: number
-  expensesThisMonth: number
-  expenseCount: number
-  expenseChange: number
-  savingsGoalProgress: number
-  recentExpenses: any[]
-  savingsBoxes: any[]
-  monthlyTrend: any[]
-  expensesByCompany: any[]
+type Loan = Record<string, any>
+type Client = Record<string, any>
+
+type DashboardState = {
+  loans: Loan[]
+  loanSummary: Record<string, any>
+  clients: Client[]
+  clientSummary: Record<string, any>
 }
 
-function formatCOP(value: number) {
-  return '$' + Math.abs(value).toLocaleString('es-CO')
+function formatCOP(value: number | string | undefined) {
+  const number = Number(value || 0)
+  return '$' + Math.abs(number).toLocaleString('es-CO', { maximumFractionDigits: 0 })
+}
+
+function formatDate(value?: string) {
+  if (!value) return '—'
+  return new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
+function statusLabel(status: string) {
+  if (status === 'paid') return 'Pagado'
+  if (status === 'cancelled') return 'Cancelado'
+  if (status === 'partial') return 'Parcial'
+  return 'Activo'
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loanSummary, setLoanSummary] = useState<any>({})
+  const [data, setData] = useState<DashboardState>({ loans: [], loanSummary: {}, clients: [], clientSummary: {} })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
-      dashboardAPI.summary(),
       prestamosAPI.list({ status: 'all', limit: 200 }),
+      clientesAPI.list({ status: 'all', limit: 300 }),
     ])
-      .then(([dashboardRes, loansRes]) => {
-        setData(dashboardRes.data)
-        const prestamosVencidos = (loansRes.data.loans || []).filter((loan: any) => loan.status === 'active' && Number(loan.overdue_count || 0) > 0).length
-        setLoanSummary({ ...(loansRes.data.summary || {}), prestamos_vencidos: prestamosVencidos })
+      .then(([loansRes, clientsRes]) => {
+        setData({
+          loans: loansRes.data.loans || [],
+          loanSummary: loansRes.data.summary || {},
+          clients: clientsRes.data.clients || [],
+          clientSummary: clientsRes.data.summary || {},
+        })
       })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  const computed = useMemo(() => {
+    const activeLoans = data.loans.filter(loan => loan.status === 'active')
+    const overdueLoans = activeLoans.filter(loan => Number(loan.overdue_count || 0) > 0)
+    const paidLoans = data.loans.filter(loan => loan.status === 'paid')
+    const totalBalance = activeLoans.reduce((sum, loan) => sum + Number(loan.balance || 0), 0)
+    const recentLoans = [...data.loans].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 5)
+    const priorityLoans = [...activeLoans]
+      .sort((a, b) => Number(b.overdue_count || 0) - Number(a.overdue_count || 0) || String(a.first_due_date || '').localeCompare(String(b.first_due_date || '')))
+      .slice(0, 5)
+
+    return { activeLoans, overdueLoans, paidLoans, totalBalance, recentLoans, priorityLoans }
+  }, [data.loans])
 
   if (loading) {
     return (
@@ -51,50 +88,61 @@ export default function DashboardPage() {
     )
   }
 
-  if (!data) return <div style={{ padding: 40, color: 'var(--color-text-muted)' }}>Error cargando datos</div>
-
   const stats = [
     {
       label: 'Capital Activo',
-      value: formatCOP(loanSummary.active_principal || 0),
-      change: `${loanSummary.active || 0} préstamo(s) activo(s)`,
+      value: formatCOP(data.loanSummary.active_principal),
+      change: `${computed.activeLoans.length} préstamo(s) activo(s)`,
       positive: true,
-      icon: CircleDollarSign, color: 'var(--color-accent)', bg: 'var(--color-accent-soft)',
+      icon: CircleDollarSign,
+      color: 'var(--color-accent)',
+      bg: 'var(--color-accent-soft)',
     },
     {
       label: 'Total a Cobrar',
-      value: formatCOP(loanSummary.active_total || 0),
-      change: 'Capital + interés pendiente',
+      value: formatCOP(data.loanSummary.active_total),
+      change: `Saldo pendiente ${formatCOP(computed.totalBalance)}`,
       positive: true,
-      icon: Wallet, color: 'var(--color-success)', bg: 'var(--color-success-soft)',
+      icon: Wallet,
+      color: 'var(--color-success)',
+      bg: 'var(--color-success-soft)',
     },
     {
       label: 'Préstamos Vencidos',
-      value: String(loanSummary.prestamos_vencidos || 0),
-      change: 'Con al menos una cuota vencida',
-      positive: Number(loanSummary.prestamos_vencidos || 0) === 0,
-      icon: UserRound, color: 'var(--color-warning)', bg: 'var(--color-warning-soft)',
+      value: String(computed.overdueLoans.length),
+      change: 'Con cuotas vencidas',
+      positive: computed.overdueLoans.length === 0,
+      icon: AlertTriangle,
+      color: 'var(--color-warning)',
+      bg: 'var(--color-warning-soft)',
     },
     {
       label: 'Cuotas Vencidas',
-      value: String(loanSummary.overdue_installments || 0),
+      value: String(data.loanSummary.overdue_installments || 0),
       change: 'Pendientes fuera de fecha',
-      positive: Number(loanSummary.overdue_installments || 0) === 0,
-      icon: AlertTriangle, color: 'var(--color-danger)', bg: 'var(--color-danger-soft)',
+      positive: Number(data.loanSummary.overdue_installments || 0) === 0,
+      icon: Clock,
+      color: 'var(--color-danger)',
+      bg: 'var(--color-danger-soft)',
     },
   ]
 
   return (
-    <div className="animate-fade-in">
-      <div className="page-header">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">
-          Resumen principal de préstamos — {new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
-        </p>
+    <div className="animate-fade-in dashboard-prestamos">
+      <div className="page-header dashboard-top">
+        <div>
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">
+            Resumen operativo de préstamos — {new Date().toLocaleDateString('es-CO', { month: 'long', year: 'numeric' })}
+          </p>
+        </div>
+        <div className="dashboard-actions">
+          <Link className="btn btn-primary" to="/prestamos"><Plus size={16} /> Nuevo préstamo</Link>
+          <Link className="btn btn-secondary" to="/clientes"><Users size={16} /> Clientes</Link>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="stats-grid stagger-children">
+      <div className="stats-grid dashboard-stats">
         {stats.map(stat => {
           const Icon = stat.icon
           return (
@@ -111,102 +159,121 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Two columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        {/* Recent Expenses */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="dashboard-grid">
+        <section className="card dashboard-panel">
+          <div className="panel-head">
             <div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Movimientos Recientes</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 }}>Últimos gastos registrados</p>
+              <h3>Préstamos recientes</h3>
+              <p>Últimos préstamos registrados en la app.</p>
             </div>
-            <CreditCard size={18} style={{ color: 'var(--color-text-muted)' }} />
+            <Link to="/prestamos">Ver todos</Link>
           </div>
-          <div>
-            {data.recentExpenses.length === 0 ? (
-              <div style={{ padding: 20, textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
-                No hay gastos registrados
-              </div>
-            ) : data.recentExpenses.map((tx: any) => (
-              <div key={tx.id} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 20px', borderBottom: '1px solid var(--color-border-light)',
-                transition: 'background var(--transition-fast)', cursor: 'pointer',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-bg-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-sm)', background: 'var(--color-danger-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <ArrowDownRight size={16} style={{ color: 'var(--color-danger)' }} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>{tx.description}</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>{tx.category || 'Sin categoría'}</div>
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-danger)' }}>
-                    -{tx.currency_symbol || '$'}{Math.abs(tx.amount).toLocaleString('es-CO', { minimumFractionDigits: tx.amount < 1000 ? 2 : 0 })} <span style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{tx.currency_code}</span>
-                  </div>
-                  {tx.currency_code !== 'COP' && tx.amount_cop && (
-                    <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)' }}>≈ {formatCOP(tx.amount_cop)} COP</div>
-                  )}
-                  <div style={{ fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                    {new Date(tx.date).toLocaleDateString('es-CO', { day: 'numeric', month: 'short' })}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Expenses by Company */}
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--color-border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>Gastos por Empresa</h3>
-              <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: 2 }}>Distribución en el mes actual</p>
+          {computed.recentLoans.length === 0 ? (
+            <div className="empty-panel">No hay préstamos registrados todavía.</div>
+          ) : (
+            <div className="loan-list-mini">
+              {computed.recentLoans.map(loan => (
+                <div key={loan.id} className="loan-row-mini">
+                  <div>
+                    <strong>{loan.client_name || 'Cliente sin nombre'}</strong>
+                    <span>{statusLabel(loan.status)} · {loan.installments_count || 0} cuotas</span>
+                  </div>
+                  <div className="row-money">
+                    <strong>{formatCOP(loan.total_amount)}</strong>
+                    <span>Saldo {formatCOP(loan.balance)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-            <Receipt size={18} style={{ color: 'var(--color-text-muted)' }} />
+          )}
+        </section>
+
+        <section className="card dashboard-panel">
+          <div className="panel-head">
+            <div>
+              <h3>Atención y vencimientos</h3>
+              <p>Prioridad por cuotas vencidas o fechas próximas.</p>
+            </div>
+            <AlertTriangle size={18} style={{ color: 'var(--color-warning)' }} />
           </div>
-          <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {data.expensesByCompany?.length === 0 ? (
-              <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '0.85rem', padding: 10 }}>
-                No hay gastos este mes
-              </div>
-            ) : data.expensesByCompany?.map((comp: any) => {
-              const progress = data.expensesThisMonth > 0 ? Math.round((comp.total / data.expensesThisMonth) * 100) : 0
-              return (
-                <div key={comp.name || 'Personal'}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                    <div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{comp.name || 'Personal (Sin empresa)'}</span>
-                    </div>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', fontWeight: 600 }}>
-                      {formatCOP(comp.total)}
+
+          {computed.priorityLoans.length === 0 ? (
+            <div className="empty-panel success-empty">Sin préstamos activos pendientes.</div>
+          ) : (
+            <div className="priority-list">
+              {computed.priorityLoans.map(loan => (
+                <div key={loan.id} className={`priority-row ${Number(loan.overdue_count || 0) > 0 ? 'overdue' : ''}`}>
+                  <div className="priority-icon"><CalendarDays size={16} /></div>
+                  <div>
+                    <strong>{loan.client_name}</strong>
+                    <span>
+                      {Number(loan.overdue_count || 0) > 0
+                        ? `${loan.overdue_count} cuota(s) vencida(s)`
+                        : `Primera cuota: ${formatDate(loan.first_due_date)}`}
                     </span>
                   </div>
-                  <div style={{ width: '100%', height: 8, background: 'var(--color-bg-hover)', borderRadius: 9999, overflow: 'hidden' }}>
-                    <div style={{
-                      width: `${Math.min(progress, 100)}%`, height: '100%', borderRadius: 9999,
-                      background: comp.color || 'var(--color-accent)',
-                      transition: 'width 0.6s ease',
-                    }} />
-                  </div>
-                  <div style={{ textAlign: 'right', fontSize: '0.72rem', color: 'var(--color-text-muted)', marginTop: 4 }}>
-                    {progress}% del total
-                  </div>
+                  <div className="row-money"><strong>{formatCOP(loan.balance)}</strong><span>saldo</span></div>
                 </div>
-              )
-            })}
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="dashboard-grid small-grid">
+        <section className="card mini-card">
+          <div className="mini-icon"><UserRound size={18} /></div>
+          <div>
+            <span>Clientes activos</span>
+            <strong>{data.clientSummary.active || data.clients.filter(c => c.status === 'active').length}</strong>
           </div>
-        </div>
+        </section>
+        <section className="card mini-card">
+          <div className="mini-icon"><Users size={18} /></div>
+          <div>
+            <span>Total clientes</span>
+            <strong>{data.clientSummary.total || data.clients.length}</strong>
+          </div>
+        </section>
+        <section className="card mini-card">
+          <div className="mini-icon"><Wallet size={18} /></div>
+          <div>
+            <span>Préstamos pagados</span>
+            <strong>{computed.paidLoans.length}</strong>
+          </div>
+        </section>
       </div>
 
       <style>{`
-        @media (max-width: 768px) {
-          .page-content > div > div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
-        }
+        .dashboard-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+        .dashboard-actions { display:flex; gap:10px; flex-wrap:wrap; }
+        .dashboard-stats { grid-template-columns: repeat(4, 1fr) !important; }
+        .dashboard-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px; }
+        .dashboard-panel { padding:0; overflow:hidden; }
+        .panel-head { padding:16px 20px; border-bottom:1px solid var(--color-border); display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .panel-head h3 { margin:0; font-size:.95rem; font-weight:700; color:var(--color-text-primary); }
+        .panel-head p { margin:3px 0 0; font-size:.75rem; color:var(--color-text-muted); }
+        .panel-head a { font-size:.78rem; color:var(--color-accent); text-decoration:none; }
+        .loan-list-mini, .priority-list { display:flex; flex-direction:column; }
+        .loan-row-mini, .priority-row { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px 20px; border-bottom:1px solid var(--color-border-light); }
+        .loan-row-mini:last-child, .priority-row:last-child { border-bottom:none; }
+        .loan-row-mini strong, .priority-row strong { display:block; color:var(--color-text-primary); font-size:.86rem; }
+        .loan-row-mini span, .priority-row span { display:block; color:var(--color-text-muted); font-size:.72rem; margin-top:2px; }
+        .row-money { text-align:right; min-width:110px; }
+        .priority-row { justify-content:flex-start; }
+        .priority-row .row-money { margin-left:auto; }
+        .priority-icon { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:var(--color-accent-soft); color:var(--color-accent); flex:0 0 auto; }
+        .priority-row.overdue .priority-icon { background:var(--color-danger-soft); color:var(--color-danger); }
+        .empty-panel { padding:28px 20px; color:var(--color-text-muted); text-align:center; font-size:.85rem; }
+        .success-empty { color:var(--color-success); }
+        .small-grid { grid-template-columns:repeat(3, 1fr); }
+        .mini-card { padding:16px; display:flex; align-items:center; gap:12px; }
+        .mini-icon { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--color-accent-soft); color:var(--color-accent); }
+        .mini-card span { display:block; color:var(--color-text-muted); font-size:.76rem; }
+        .mini-card strong { display:block; color:var(--color-text-primary); font-size:1.2rem; margin-top:2px; }
+        @media (max-width:900px){ .dashboard-stats{grid-template-columns:1fr 1fr!important}.dashboard-grid,.small-grid{grid-template-columns:1fr}.row-money{text-align:left;min-width:auto}.loan-row-mini,.priority-row{align-items:flex-start;flex-wrap:wrap} }
+        @media (max-width:560px){ .dashboard-stats{grid-template-columns:1fr!important}.dashboard-actions{width:100%}.dashboard-actions .btn{flex:1;justify-content:center} }
       `}</style>
     </div>
   )

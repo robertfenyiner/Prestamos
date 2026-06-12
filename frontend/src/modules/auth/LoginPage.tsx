@@ -55,29 +55,15 @@ export default function LoginPage() {
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{
-            width: 100, height: 100,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--color-accent), #a78bfa, #818cf8)',
-            padding: 3,
-            marginBottom: 16,
-            boxShadow: '0 0 30px rgba(99, 102, 241, 0.4), 0 0 60px rgba(99, 102, 241, 0.15)',
-            animation: 'pulse-glow 3s ease-in-out infinite',
-          }}>
-            <img src="/logo.jpg" alt="Prestamos" style={{
-              width: '100%', height: '100%',
-              borderRadius: '50%',
-              objectFit: 'cover',
-              display: 'block',
-              border: '3px solid var(--color-bg-card)',
-            }} />
-          </div>
+          <img src="/logo-garcia.jpg?v=2" alt="Garcia" style={{
+            width: 180,
+            height: 'auto',
+            marginBottom: 20,
+            display: 'block',
+          }} />
           <h1 style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: 4, letterSpacing: '-0.02em' }}>
             Prestamos Garcia
           </h1>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-            Inicia sesión para acceder a tus finanzas
-          </p>
         </div>
 
         {/* Error */}
@@ -94,25 +80,18 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-              Usuario
-            </label>
             <div style={{ position: 'relative' }}>
+              <input className="input" type="text" placeholder="Usuario" value={email}
+                onChange={e => setEmail(e.target.value)} style={{ paddingLeft: 38, textAlign: 'center' }} id="login-email" required />
               <Mail size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-              <input className="input" type="text" placeholder="Tu usuario" value={email}
-                onChange={e => setEmail(e.target.value)} style={{ paddingLeft: 38 }} id="login-email" required />
             </div>
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: 'var(--color-text-secondary)', marginBottom: 6 }}>
-              Contraseña
-            </label>
             <div style={{ position: 'relative' }}>
-              <Lock size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
               <input className="input" type={showPassword ? 'text' : 'password'} placeholder="••••••••"
                 value={password} onChange={e => setPassword(e.target.value)}
-                style={{ paddingLeft: 38, paddingRight: 40 }} id="login-password" required />
+                style={{ paddingLeft: 38, paddingRight: 40, textAlign: 'center' }} id="login-password" required />
               <button type="button" onClick={() => setShowPassword(!showPassword)}
                 style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center' }}
                 aria-label={showPassword ? 'Ocultar' : 'Mostrar'}>
